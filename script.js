@@ -14,33 +14,26 @@ let keyToDelete = null; // For delete confirmation modal
 // --- Authentication & Initialization ---
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('DOMContentLoaded in script.js');
-    console.log('Document body classes:', document.body.classList.toString());
-    
     // This check is for all pages that require authentication
     // Add the 'requires-auth' class to the body tag of pages that need it.
     if (document.body.classList.contains('requires-auth')) {
-        console.log('Page requires authentication in script.js');
+        // checkAuth() now resolves with the user object or null
+        const user = await checkAuth(); // from auth.js
+        if (!user) {
+            window.location.href = 'login.html';
+            return;
+        }
         
-        // Wait a bit for auth.js to complete its initialization
-        // auth.js already handles authentication and sets global variables
-        setTimeout(() => {
-            console.log('Checking if auth.js has completed initialization...');
-            console.log('Global variables in script.js:', {
-                currentUser: window.currentUser,
-                currentUserRole: window.currentUserRole,
-                currentUserData: window.currentUserData
-            });
-            
-            if (window.currentUser) {
-                console.log('User authenticated, calling initializePageContent...');
-                initializePageContent();
-            } else {
-                console.log('No user found, auth.js should handle redirect');
-            }
-        }, 100);
-    } else {
-        console.log('Page does not require authentication in script.js');
+        // Set global user variables (already done in auth.js, but ensure consistency)
+        window.currentUser = user;
+        window.currentUserRole = user.role;
+        // window.currentUserData is also set in auth.js after getUserData
+
+        // Update UI elements like navbar, user profile icon etc.
+        updateAuthUI(user); // Pass the user object to updateAuthUI
+
+        // Load page-specific data after authentication is confirmed
+        initializePageContent();
     }
 
     // Add a global click listener to close dropdowns when clicking outside
@@ -89,29 +82,20 @@ function initializeFlatpickr() {
 }
 
 function initializePageContent() {
-    console.log('initializePageContent called');
-    console.log('Current page elements:', {
-        homeRoomCards: !!document.getElementById('home-room-cards'),
-        level1OwnerTabs: !!document.getElementById('level1-owner-tabs-container'),
-        historySection: !!document.getElementById('history-section')
-    });
     
     // Route to the correct function based on the current page
     if (document.getElementById('home-room-cards') || document.getElementById('level1-owner-tabs-container')) { // Check for L1 tabs too
-        console.log('Home page detected, calling renderHomeRoomCards...');
         renderHomeRoomCards(); // This will now use global currentUser, currentUserRole, currentUserData
         console.log('Current user role:', window.currentUserRole);
         // Initialize Level 1 Owner specific UI if applicable
         
         if (window.currentUserRole == '1') {
-            console.log('User is Level 1 owner, initializing L1 interface...');
             if (typeof initializeLevel1OwnerInterface === 'function') {
                 initializeLevel1OwnerInterface();
             } else {
                 console.error('initializeLevel1OwnerInterface function not found. Make sure tenantManagement.js is loaded.');
             }
         } else {
-            console.log('User is not Level 1 owner, hiding L1 elements...');
             // Hide L1 specific elements if user is not L1
             const l1Tabs = document.getElementById('level1-owner-tabs-container');
             if (l1Tabs) l1Tabs.classList.add('hidden');
@@ -129,15 +113,12 @@ function initializePageContent() {
         const addRoomModal = document.getElementById('add-room-modal');
         const addRoomForm = document.getElementById('add-room-form');
 
-        console.log('Setting up add room button...');
         // Show/hide add room button based on permissions
         if (addRoomBtn) {
             if (hasPermission('canAddNewBills')) {
-                console.log('User has permission to add bills, showing add room button');
                 addRoomBtn.classList.remove('hidden');
                 addRoomBtn.addEventListener('click', () => openModal('add-room-modal'));
             } else {
-                console.log('User does not have permission to add bills, hiding add room button');
                 addRoomBtn.classList.add('hidden');
             }
         }
@@ -147,49 +128,11 @@ function initializePageContent() {
         
         // Initialize evidence modal listeners for home page - only for admin
         if (hasPermission('canUploadEvidence')) {
-            console.log('User has permission to upload evidence, setting up evidence modal...');
             setupEvidenceModalListeners();
         }
 
-        // Add event listeners for the 'Bulk Add' modal
-        const bulkAddBtn = document.getElementById('btn-bulk-add');
-        const closeBulkAddModalBtn = document.getElementById('close-bulk-data-modal');
-        const cancelBulkAddBtn = document.getElementById('cancel-bulk-data');
-        const bulkDataForm = document.getElementById('bulk-data-form');
-
-        console.log('Setting up bulk add button...');
-        if (bulkAddBtn) {
-            // Use a specific permission for this later if needed
-            if (hasPermission('canAddNewBills')) { 
-                console.log('User has permission to add bills, showing bulk add button');
-                bulkAddBtn.classList.remove('hidden');
-                bulkAddBtn.addEventListener('click', () => {
-                    openModal('bulk-data-modal');
-                    populateBulkRoomsData();
-                });
-            } else {
-                console.log('User does not have permission to add bills, hiding bulk add button');
-                bulkAddBtn.classList.add('hidden');
-            }
-        }
-        
-        if(closeBulkAddModalBtn) closeBulkAddModalBtn.addEventListener('click', () => closeModal('bulk-data-modal'));
-        if(cancelBulkAddBtn) cancelBulkAddBtn.addEventListener('click', () => closeModal('bulk-data-modal'));
-        if(bulkDataForm) bulkDataForm.addEventListener('submit', handleBulkSave);
-
-        // Initialize flatpickr for bulk modal
-        if (window.flatpickr) {
-            flatpickr("#bulk-bill-date", {
-                dateFormat: "d/m/Y",
-                defaultDate: "today",
-                theme: "dark"
-            });
-            flatpickr("#bulk-due-date", {
-                dateFormat: "d/m/Y",
-                defaultDate: new Date().fp_incr(15),
-                theme: "dark"
-            });
-        }
+        // Add bulk data entry button for all rooms
+        addBulkDataEntryButton();
 
     } else if (document.getElementById('history-section')) {
         // This is the index.html page for a specific room
@@ -225,35 +168,13 @@ function getAmountColorClass(amount) {
 
 async function renderHomeRoomCards() {
     const cardsContainer = document.getElementById('home-room-cards');
-    if (!cardsContainer) {
-        console.error('Cards container not found');
-        return;
-    }
+    if (!cardsContainer) return;
 
-    console.log('Starting renderHomeRoomCards...');
-    console.log('Firebase db object in renderHomeRoomCards:', window.db);
-    console.log('Global variables in renderHomeRoomCards:', {
-        currentUser: window.currentUser,
-        currentUserRole: window.currentUserRole,
-        currentUserData: window.currentUserData
-    });
-    
     cardsContainer.innerHTML = `<p class="text-center text-gray-400 col-span-full py-8">กำลังโหลดข้อมูลห้องพัก...</p>`;
 
     try {
-        // Check if Firebase is initialized
-        if (!window.db) {
-            console.error('Firebase database not initialized');
-            cardsContainer.innerHTML = '<p class="text-center text-red-400 col-span-full">Firebase ยังไม่ได้เริ่มต้น กรุณารีเฟรชหน้าเว็บ</p>';
-            return;
-        }
-
-        console.log('Loading data from Firebase...');
         let allBills = await loadFromFirebase();
-        console.log('Loaded bills:', allBills);
-        
         if (!allBills || allBills.length === 0) {
-            console.log('No bills found');
             cardsContainer.innerHTML = '<p class="text-center text-gray-400 col-span-full">ยังไม่มีข้อมูลห้องพัก</p>';
             return;
         }
@@ -261,27 +182,18 @@ async function renderHomeRoomCards() {
         const user = window.currentUser;
         const userRole = window.currentUserRole;
         const userData = window.currentUserData;
-        
-        console.log('User info:', { user, userRole, userData });
-        
         let displayableBills = [];
 
         if (userRole === 'admin' || (userRole === 'user' && hasPermission('canViewAllRooms'))) {
             displayableBills = allBills;
-            console.log('Admin/user - showing all bills');
         } else if (userRole === '1' && userData && userData.managedRooms) {
             displayableBills = allBills.filter(bill => userData.managedRooms.includes(bill.room));
-            console.log('Level 1 owner - filtered bills for managed rooms:', userData.managedRooms);
         } else if (userRole === 'level1_tenant' && userData && userData.accessibleRooms) {
             displayableBills = allBills.filter(bill => userData.accessibleRooms.includes(bill.room));
-            console.log('Level 1 tenant - filtered bills for accessible rooms:', userData.accessibleRooms);
         } else {
-            console.log('No permission to view rooms');
             cardsContainer.innerHTML = `<p class="text-center text-red-400 col-span-full">คุณไม่มีสิทธิ์ดูข้อมูลห้อง</p>`;
             return;
         }
-
-        console.log('Displayable bills count:', displayableBills.length);
 
         if (displayableBills.length === 0) {
             cardsContainer.innerHTML = '<p class="text-center text-gray-400 col-span-full">ไม่พบข้อมูลห้องพักที่คุณมีสิทธิ์เข้าถึง</p>';
@@ -304,7 +216,6 @@ async function renderHomeRoomCards() {
             }
         });
 
-        console.log('Processed rooms:', Object.keys(rooms));
         const sortedRooms = Object.values(rooms).sort((a, b) => String(a.room).localeCompare(String(b.room)));
 
         cardsContainer.innerHTML = sortedRooms.map(roomData => {
@@ -321,10 +232,7 @@ async function renderHomeRoomCards() {
                     if (dateParts.length === 3) {
                        const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
                        if (!isNaN(date.getTime())) {
-                           const day = String(date.getDate()).padStart(2, '0');
-                           const month = String(date.getMonth() + 1).padStart(2, '0');
-                           const year = date.getFullYear();
-                           formattedDate = `${day}/${month}/${year}`;
+                           formattedDate = date.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
                        }
                     }
                 } catch (e) { console.warn("Could not parse date:", roomData.date); }
@@ -386,8 +294,6 @@ async function renderHomeRoomCards() {
             `;
         }).join('');
 
-        console.log('Rendered', sortedRooms.length, 'room cards');
-
         // Staggered animation for cards
         const cards = cardsContainer.querySelectorAll('.room-card');
         cards.forEach((card, index) => {
@@ -399,7 +305,6 @@ async function renderHomeRoomCards() {
 
     } catch (error) {
         console.error("Error rendering room cards:", error);
-        console.error("Error stack:", error.stack);
         cardsContainer.innerHTML = '<p class="text-center text-red-400 col-span-full">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
     }
 }
@@ -525,49 +430,22 @@ async function renderHistoryTable(room) {
 
 async function loadFromFirebase(room = null) {
     try {
-        console.log('loadFromFirebase called with room:', room);
-        console.log('Firebase db object:', window.db);
-        console.log('Global db variable:', db);
-        
-        // Try to get db from multiple sources
-        const database = window.db || db;
-        if (!database) {
-            console.error('Firebase database not available');
-            return [];
-        }
-        
-        console.log('Using database object:', database);
-        const snapshot = await database.ref('electricityData').once('value');
-        console.log('Firebase snapshot:', snapshot.val());
-        
+        const snapshot = await db.ref('electricityData').once('value');
         let data = snapshot.val();
-        if (!data) {
-            console.log('No data found in Firebase');
-            return [];
-        }
+        if (!data) return [];
 
         let bills = Object.keys(data).map(key => ({ key, ...data[key] }));
-        console.log('Processed bills:', bills);
 
         // Filter out bills without room property
         bills = bills.filter(bill => bill.room);
-        console.log('Bills with room property:', bills);
 
         if (room) {
             bills = bills.filter(bill => bill.room === room);
-            console.log('Filtered bills for room', room, ':', bills);
         }
 
-        const sortedBills = bills.sort((a, b) => {
-            if (!a.date || !b.date) return 0;
-            return new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-'));
-        });
-        
-        console.log('Final sorted bills:', sortedBills);
-        return sortedBills;
+        return bills.sort((a, b) => new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-')));
     } catch (error) {
         console.error('Error loading data from Firebase:', error);
-        console.error('Error stack:', error.stack);
         return [];
     }
 }
@@ -2997,192 +2875,218 @@ function openBulkDataEntryModal() {
 }
 
 async function populateBulkRoomsData() {
-    const roomsListContainer = document.getElementById('bulk-rooms-list');
-    if (!roomsListContainer) return;
+    const modalBody = document.querySelector('#bulk-data-modal .modal-body');
 
-    roomsListContainer.innerHTML = '<p class="text-center text-gray-400 py-8">กำลังโหลดข้อมูลห้องพัก...</p>';
+    if (!modalBody) {
+        console.error('Bulk modal body not found!');
+        return;
+    }
 
     try {
         const allBills = await loadFromFirebase();
-        if (!allBills || allBills.length === 0) {
-            roomsListContainer.innerHTML = '<p class="text-center text-gray-400">ยังไม่มีข้อมูลห้องพัก</p>';
-            return;
-        }
-        
         const user = window.currentUser;
         const userRole = window.currentUserRole;
         const userData = window.currentUserData;
-        let displayableBills = [];
 
+        let displayableBills = [];
         if (userRole === 'admin' || hasPermission('canViewAllRooms')) {
             displayableBills = allBills;
         } else if (userRole === '1' && userData && userData.managedRooms) {
             displayableBills = allBills.filter(bill => userData.managedRooms.includes(bill.room));
-        } else {
-             displayableBills = [];
         }
 
-        const rooms = {};
-        displayableBills.forEach(bill => {
-            if (bill && typeof bill.room !== 'undefined' && bill.room !== null && String(bill.room).trim() !== '') {
-                 if (bill.date && typeof bill.date === 'string' && bill.date.split('/').length === 3) {
-                    if (!rooms[bill.room] || new Date(bill.date.split('/').reverse().join('-')) > new Date(rooms[bill.room].date.split('/').reverse().join('-'))) {
-                        rooms[bill.room] = bill;
-                    }
-                } else if (!rooms[bill.room]) {
-                    rooms[bill.room] = bill;
-                }
-            }
-        });
-        
-        const sortedRooms = Object.values(rooms).sort((a, b) => String(a.room).localeCompare(String(b.room), undefined, { numeric: true }));
+        const rooms = [...new Set(displayableBills.map(bill => bill.room))].sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
 
-        if (sortedRooms.length === 0) {
-            roomsListContainer.innerHTML = '<p class="text-center text-red-400">ไม่พบห้องพักที่คุณมีสิทธิ์ป้อนข้อมูล</p>';
+        if (rooms.length === 0) {
+            modalBody.innerHTML = '<p class="text-center text-red-400">ไม่พบห้องพักที่คุณมีสิทธิ์เข้าถึง</p>';
             return;
         }
 
-        roomsListContainer.innerHTML = sortedRooms.map(roomData => `
-            <div class="bg-slate-800 rounded-lg p-4 border border-slate-600" data-room-id="${roomData.room}" data-room-name="${roomData.name || ''}">
-                <h4 class="text-lg font-semibold text-white mb-3 flex justify-between items-center">
-                    <span>ห้อง ${roomData.room} <span class="text-sm text-slate-400 font-normal truncate">${roomData.name || ''}</span></span>
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <span class="text-sm text-slate-300">กรอกข้อมูล</span>
-                        <input type="checkbox" class="form-checkbox h-5 w-5 text-violet-500 bg-slate-700 border-slate-500 rounded focus:ring-violet-400 bulk-room-enable" checked>
-                    </label>
-                </h4>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bulk-room-inputs">
-                    <div class="form-group mb-0">
-                        <label class="form-label text-sm" for="bulk-current-${roomData.room}">มิเตอร์ไฟ (ปัจจุบัน)</label>
-                        <input type="number" id="bulk-current-${roomData.room}" class="form-input text-sm" placeholder="เลขมิเตอร์">
+        // --- Create the full form HTML ---
+        const formHTML = `
+            <div class="space-y-6">
+                <!-- Section 1: Date & Rates -->
+                <fieldset class="bg-slate-700/50 rounded-xl p-5">
+                    <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2"><i class="fas fa-cogs text-violet-300"></i>ตั้งค่าโดยรวม</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                        <div class="form-group">
+                            <label class="form-label" for="bulk-date">วันที่บันทึก *</label>
+                            <input type="text" id="bulk-date" class="form-input" required placeholder="DD/MM/YYYY">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="bulk-due-date">วันครบกำหนด</label>
+                            <input type="text" id="bulk-due-date" class="form-input" placeholder="DD/MM/YYYY">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="bulk-electricity-rate">ค่าไฟ/หน่วย *</label>
+                            <input type="number" step="0.01" id="bulk-electricity-rate" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="bulk-water-rate">ค่าน้ำ/หน่วย</label>
+                            <input type="number" step="0.01" id="bulk-water-rate" class="form-input">
+                        </div>
                     </div>
-                    <div class="form-group mb-0">
-                        <label class="form-label text-sm" for="bulk-previous-${roomData.room}">มิเตอร์ไฟ (ก่อนหน้า)</label>
-                        <input type="number" id="bulk-previous-${roomData.room}" class="form-input text-sm bg-slate-900/50" value="${roomData.current || ''}" readonly>
+                </fieldset>
+
+                <!-- Section 2: Room Data -->
+                <fieldset class="bg-slate-700/50 rounded-xl p-5">
+                    <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2"><i class="fas fa-door-open text-amber-300"></i>ข้อมูลมิเตอร์ห้องพัก</legend>
+                    <div id="bulk-rooms-list" class="space-y-4 mt-4 max-h-[40vh] overflow-y-auto pr-3">
+                        ${rooms.map(room => {
+                            const latestBill = displayableBills
+                                .filter(bill => bill.room === room && bill.date)
+                                .sort((a, b) => new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-')))[0] || {};
+                            
+                            return `
+                            <div class="bg-slate-800 rounded-lg p-4 border border-slate-600">
+                                <h4 class="text-lg font-semibold text-white mb-3">ห้อง ${room}</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label text-sm" for="bulk-electricity-current-${room}">มิเตอร์ไฟ (ปัจจุบัน)</label>
+                                        <input type="number" id="bulk-electricity-current-${room}" class="form-input text-sm" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label text-sm" for="bulk-electricity-previous-${room}">มิเตอร์ไฟ (ก่อนหน้า)</label>
+                                        <input type="number" id="bulk-electricity-previous-${room}" class="form-input text-sm bg-slate-900/50" value="${latestBill.current || ''}" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label text-sm" for="bulk-water-current-${room}">มิเตอร์น้ำ (ปัจจุบัน)</label>
+                                        <input type="number" id="bulk-water-current-${room}" class="form-input text-sm">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label text-sm" for="bulk-water-previous-${room}">มิเตอร์น้ำ (ก่อนหน้า)</label>
+                                        <input type="number" id="bulk-water-previous-${room}" class="form-input text-sm bg-slate-900/50" value="${latestBill.waterCurrent || ''}" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                            `;
+                        }).join('')}
                     </div>
-                     <div class="form-group mb-0">
-                        <label class="form-label text-sm" for="bulk-water-current-${roomData.room}">มิเตอร์น้ำ (ปัจจุบัน)</label>
-                        <input type="number" id="bulk-water-current-${roomData.room}" class="form-input text-sm" placeholder="เลขมิเตอร์">
-                    </div>
-                    <div class="form-group mb-0">
-                        <label class="form-label text-sm" for="bulk-water-previous-${roomData.room}">มิเตอร์น้ำ (ก่อนหน้า)</label>
-                        <input type="number" id="bulk-water-previous-${roomData.room}" class="form-input text-sm bg-slate-900/50" value="${roomData.currentWater || ''}" readonly>
-                    </div>
-                </div>
+                </fieldset>
             </div>
-        `).join('');
-        
-        roomsListContainer.querySelectorAll('.bulk-room-enable').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
-                const inputsContainer = e.target.closest('.bg-slate-800').querySelector('.bulk-room-inputs');
-                const inputs = inputsContainer.querySelectorAll('input');
-                inputs.forEach(input => {
-                    if (!input.readOnly) {
-                         input.disabled = !e.target.checked;
-                    }
-                });
-                inputsContainer.style.opacity = e.target.checked ? '1' : '0.5';
-            });
-        });
+        `;
+
+        modalBody.innerHTML = formHTML;
 
         // Initialize Flatpickr for the newly created date inputs
         initializeFlatpickr();
 
     } catch (error) {
-        console.error("Error populating bulk rooms data:", error);
-        roomsListContainer.innerHTML = '<p class="text-center text-red-400">เกิดข้อผิดพลาดในการโหลดข้อมูลห้องพัก</p>';
+        console.error('Error populating bulk rooms data:', error);
+        modalBody.innerHTML = '<p class="text-center text-red-400">เกิดข้อผิดพลาดในการโหลดข้อมูลห้อง</p>';
     }
 }
 
-async function handleBulkSave(event) {
+async function handleBulkDataEntry(event) {
     event.preventDefault();
-    const billDate = document.getElementById('bulk-bill-date').value;
-    const dueDate = document.getElementById('bulk-due-date').value;
-    const totalUnits = parseFloat(document.getElementById('bulk-total-units').value) || null;
-    const totalBill = parseFloat(document.getElementById('bulk-total-bill').value) || null;
 
-    if (!billDate || !dueDate) {
-        showAlert('กรุณากรอกวันที่จดและวันครบกำหนด', 'error');
-        return;
-    }
-    
-    let ratePerUnit = (totalUnits && totalBill && totalUnits > 0) ? (totalBill / totalUnits) : null;
-    if (ratePerUnit === null) {
-         showAlert('ไม่สามารถคำนวณเรทต่อหน่วยได้ บิลค่าไฟจะถูกบันทึกเป็น 0', 'warning');
-    }
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (!submitBtn) return;
 
-    const updates = {};
-    const roomsToUpdate = document.querySelectorAll('#bulk-rooms-list .bg-slate-800');
-    let entriesCount = 0;
-
-    for (const roomContainer of roomsToUpdate) {
-        const enableCheckbox = roomContainer.querySelector('.bulk-room-enable');
-        if (!enableCheckbox || !enableCheckbox.checked) {
-            continue;
-        }
-
-        const room = roomContainer.dataset.roomId;
-        const currentReadingEl = document.getElementById(`bulk-current-${room}`);
-        const currentReading = parseFloat(currentReadingEl.value);
-        const previousReading = parseFloat(document.getElementById(`bulk-previous-${room}`).value) || 0;
-        
-        const currentWaterReading = parseFloat(document.getElementById(`bulk-water-current-${room}`).value) || 0;
-        const previousWaterReading = parseFloat(document.getElementById(`bulk-water-previous-${room}`).value) || 0;
-
-        if (!currentReadingEl.value) continue; // Skip if no new electricity meter reading
-
-        if (isNaN(currentReading) || currentReading < previousReading) {
-            showAlert(`ข้อมูลห้อง ${room} ไม่ถูกต้อง: เลขมิเตอร์ปัจจุบันต้องเป็นตัวเลขและมากกว่าครั้งก่อน`, 'error');
-            return;
-        }
-        
-        if (isNaN(currentWaterReading) || (currentWaterReading > 0 && currentWaterReading < previousWaterReading)) {
-            showAlert(`ข้อมูลค่าน้ำห้อง ${room} ไม่ถูกต้อง`, 'error');
-            return;
-        }
-
-        const units = currentReading - previousReading;
-        const total = ratePerUnit ? units * ratePerUnit : 0;
-        const waterUnits = (currentWaterReading > 0 && previousWaterReading >= 0) ? currentWaterReading - previousWaterReading : 0;
-
-        const newBill = {
-            room: room,
-            name: roomContainer.dataset.roomName,
-            date: billDate,
-            dueDate: dueDate,
-            current: currentReading,
-            previous: previousReading,
-            units: units,
-            rate: ratePerUnit,
-            total: total,
-            totalAll: totalBill,
-            currentWater: currentWaterReading,
-            previousWater: previousWaterReading,
-            waterUnits: waterUnits,
-            waterTotal: 0, 
-            createdAt: new Date().toISOString(),
-            createdBy: auth.currentUser?.uid
-        };
-
-        const newKey = db.ref('electricityData').push().key;
-        updates[`/${newKey}`] = newBill;
-        entriesCount++;
-    }
-
-    if (entriesCount === 0) {
-        showAlert('คุณไม่ได้กรอกข้อมูลใหม่สำหรับห้องใดๆ', 'info');
-        return;
-    }
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+    submitBtn.disabled = true;
 
     try {
-        await db.ref('electricityData').update(updates);
-        showAlert(`บันทึกข้อมูลสำหรับ ${entriesCount} ห้องเรียบร้อยแล้ว`, 'success');
+        const date = document.getElementById('bulk-date').value;
+        const dueDate = document.getElementById('bulk-due-date').value;
+        const electricityRate = Number(document.getElementById('bulk-electricity-rate').value);
+        const waterRate = Number(document.getElementById('bulk-water-rate').value);
+
+        if (!date || !electricityRate) { // Water rate can be optional
+            showAlert('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (วันที่, ค่าไฟ/หน่วย)', 'error');
+            throw new Error("Missing required fields");
+        }
+        
+        const roomInputs = document.querySelectorAll('#bulk-rooms-list > div');
+        const roomsToProcess = Array.from(roomInputs).map(div => div.querySelector('h4').textContent.replace('ห้อง ', '').trim());
+        
+        let successCount = 0;
+        let errorCount = 0;
+        let errorRooms = [];
+
+        const allBills = await loadFromFirebase(); // to get the name
+
+        for (const room of roomsToProcess) {
+            try {
+                const currentElectricityInput = document.getElementById(`bulk-electricity-current-${room}`);
+                const previousElectricityInput = document.getElementById(`bulk-electricity-previous-${room}`);
+                const currentWaterInput = document.getElementById(`bulk-water-current-${room}`);
+                const previousWaterInput = document.getElementById(`bulk-water-previous-${room}`);
+
+                const currentElectricity = Number(currentElectricityInput.value);
+                const previousElectricity = Number(previousElectricityInput.value);
+
+                if (isNaN(currentElectricity) || currentElectricity === 0 || isNaN(previousElectricity) || currentElectricity < previousElectricity) {
+                    console.warn(`Skipping room ${room} - invalid or missing electricity data.`);
+                    errorCount++;
+                    errorRooms.push(room);
+                    continue;
+                }
+                
+                const latestBillForRoom = allBills
+                    .filter(bill => bill.room === room)
+                    .sort((a, b) => new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-')))[0] || {};
+
+                const billData = {
+                    room: room,
+                    name: latestBillForRoom.name || 'ไม่มีชื่อ',
+                    date: date,
+                    dueDate: dueDate || '',
+                    current: currentElectricity,
+                    previous: previousElectricity,
+                    units: currentElectricity - previousElectricity,
+                    rate: electricityRate,
+                    total: (currentElectricity - previousElectricity) * electricityRate,
+                    timestamp: Date.now()
+                };
+
+                // Add water data if available
+                const currentWater = Number(currentWaterInput.value);
+                const previousWater = Number(previousWaterInput.value);
+                if (!isNaN(currentWater) && !isNaN(previousWater) && currentWater >= previousWater && waterRate > 0) {
+                     billData.waterCurrent = currentWater;
+                     billData.waterPrevious = previousWater;
+                     billData.waterUnits = currentWater - previousWater;
+                     billData.waterRate = waterRate;
+                     billData.waterTotal = (currentWater - previousWater) * waterRate;
+                } else {
+                     billData.waterCurrent = 0;
+                     billData.waterPrevious = 0;
+                     billData.waterUnits = 0;
+                     billData.waterRate = 0;
+                     billData.waterTotal = 0;
+                }
+
+                await saveToFirebase(billData);
+                successCount++;
+            } catch (innerError) {
+                console.error(`Error processing room ${room}:`, innerError);
+                errorCount++;
+                errorRooms.push(room);
+            }
+        }
+
+        if (successCount > 0) {
+            let successMessage = `บันทึกข้อมูลสำเร็จ ${successCount} ห้อง`;
+            if (errorCount > 0) {
+                successMessage += ` (มีข้อผิดพลาด ${errorCount} ห้อง: ${errorRooms.join(', ')})`;
+            }
+            showAlert(successMessage, 'success');
+        } else {
+            showAlert(`ไม่สามารถบันทึกข้อมูลได้ มีข้อผิดพลาด ${errorCount} ห้อง`, 'error');
+        }
+
         closeModal('bulk-data-modal');
-        document.getElementById('bulk-data-form').reset();
         renderHomeRoomCards();
+
     } catch (error) {
-        console.error('Error saving bulk data:', error);
-        showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+        console.error('Error in bulk data entry:', error);
+        showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message, 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
     }
 }
 
