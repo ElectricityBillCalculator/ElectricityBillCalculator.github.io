@@ -315,31 +315,7 @@ function buildCardContainer(cardsContainer, sortedRooms) {
                         `
             })
             cardsContainer.innerHTML += `
-            <div class="card-body">
-                    <div class="card-section">
-                        <span class="label">ค่าไฟ (หน่วย)</span>
-                        <span class="value electric">${roomData.units || 'N/A'}</span>
-                    </div>
-                    <div class="card-section">
-                        <span class="label">ค่าน้ำ (หน่วย)</span>
-                        <span class="value water">${roomData.waterUnits || '-'}</span>
-                    </div>
-                </div>
-
-                <div class="card-total">
-                    <span class="total-label">ยอดรวมล่าสุด</span>
-                    <p class="total-amount ${isPaymentConfirmed ? 'paid' : amountColorClass}">฿${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                </div>
-
-                <div class="card-due-date-wrapper">
-                    ${paymentStatusHtml}
-                </div>
-
-                <div class="card-footer">
-                    <button onclick="viewRoomHistory('${roomData.room}')" class="btn btn-primary"><i class="fas fa-history"></i>ประวัติ</button>
-                    ${hasPermission('canDeleteBills') ? `<button onclick="openDeleteRoomConfirmModal('${roomData.key}')" class="btn btn-danger" title="ลบห้อง"><i class="fas fa-trash"></i></button>` : ''}
-                </div>
-            </div>
+            
             `;
         });
 }

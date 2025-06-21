@@ -345,16 +345,6 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
-.card-due-date-wrapper {
-    /* Set a minimum height to reserve space even when empty */
-    /* This value is based on the approximate height of the .payment-status element */
-    min-height: 34px; 
-    display: flex;
-    align-items: center;
-    margin-top: 0.75rem; /* Corresponds to payment-status margin-top */
-    padding: 0 0.5rem; /* Add some padding to align with card content */
-}
-
 .card-footer {
     padding-top: 1rem;
     display: flex;
