@@ -3060,6 +3060,7 @@ async function populateBulkRoomsData() {
                     </div>
                 </div>
             </div>
+<<<<<<< HEAD
         `).join('');
         
         roomsListContainer.querySelectorAll('.bulk-room-enable').forEach(checkbox => {
@@ -3074,6 +3075,11 @@ async function populateBulkRoomsData() {
                 inputsContainer.style.opacity = e.target.checked ? '1' : '0.5';
             });
         });
+=======
+        `;
+
+        modalBody.innerHTML = formHTML;
+>>>>>>> parent of 9f69a43 (แก้ กรอก ปฏิทิน)
 
     } catch (error) {
         console.error("Error populating bulk rooms data:", error);
