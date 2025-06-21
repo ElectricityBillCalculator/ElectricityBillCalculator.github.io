@@ -2879,7 +2879,7 @@ async function populateBulkRoomsData() {
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="bulk-due-date">วันครบกำหนด</label>
-                            <input type="text" id="bulk-due-date" class="form-input" placeholder="DD/MM/YYYY">
+                            <input type="date" id="bulk-due-date" class="form-input" placeholder="DD/MM/YYYY">
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="bulk-electricity-rate">ค่าไฟ/หน่วย *</label>
