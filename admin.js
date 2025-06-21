@@ -132,8 +132,8 @@ function renderUsersTable() {
         row.innerHTML = `
             <td class="py-3 px-4">
                 <div class="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center relative">
-                    ${user.profileImage ? 
-                        `<img src="${user.profileImage}" alt="Profile" class="w-10 h-10 rounded-full object-cover">` :
+                    ${user.photoURL ? 
+                        `<img src="${user.photoURL}" alt="Profile" class="w-10 h-10 rounded-full object-cover">` :
                         `<i class="fas fa-user text-white/70"></i>`
                     }
                     <div class="absolute -bottom-1 -right-1 w-4 h-4 ${statusColor} rounded-full border-2 border-slate-800"></div>
