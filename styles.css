@@ -500,4 +500,247 @@ body {
         width: 100%; /* Make actions container full width */
         justify-content: space-around; /* Space out action buttons */
     }
-} 
+
+    /* === START: Mobile Specific Styles - Jules === */
+
+    /* General Body & Layout */
+    body {
+        font-size: 16px; /* Base font size for mobile */
+        /* Potential: remove or adjust complex body backgrounds for performance if any */
+    }
+
+    /* Assuming a general .container class might be used in HTML later */
+    .container-mobile {
+        padding-left: 15px;
+        padding-right: 15px;
+        width: 100%;
+    }
+
+    /* Hide elements not for mobile if a class .desktop-only is added to HTML */
+    .desktop-only {
+        display: none !important;
+    }
+
+    /* --- Bottom Navigation --- */
+    /* HTML for this needs to be added to relevant pages */
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 60px;
+        background-color: #1E293B; /* slate-800 */
+        border-top: 1px solid #334155; /* slate-700 */
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        z-index: 1000;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+    }
+    .bottom-nav .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        color: #94A3B8; /* slate-400 */
+        text-decoration: none;
+        padding: 5px 0;
+        font-size: 0.75rem; /* text-xs */
+        text-align: center;
+    }
+    .bottom-nav .nav-item i.icon { /* Assuming icons will have class 'icon' */
+        font-size: 1.5rem;
+        margin-bottom: 4px;
+    }
+    .bottom-nav .nav-item.active {
+        color: #3B82F6; /* blue-500 */
+    }
+    .bottom-nav .nav-item.active i.icon {
+        color: #3B82F6; /* blue-500 */
+    }
+
+    /* Adjust main content padding to avoid overlap with bottom-nav */
+    /* This requires the main content of pages to be wrapped, e.g., in <main> */
+    body > main, body > div.page-content { /* Adjust selector as per actual HTML structure */
+        padding-bottom: 75px; /* Height of nav + some buffer */
+    }
+
+    /* --- Login Page (`login.html`) --- */
+    /* Assuming a container like .login-page-container for the login form area */
+    .login-page-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 80px); /* Full viewport height minus potential header/footer */
+        padding: 20px;
+    }
+    /* Styles for form elements are general, but ensure they are touch-friendly */
+    .login-page-container .form-input { /* Specific to login if needed, or rely on general .form-input */
+        margin-bottom: 1.25rem; /* Increased spacing */
+    }
+    .login-page-container .btn-primary { /* Specific to login if needed */
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.1rem;
+    }
+
+    /* --- Home Page (`home.html`) --- */
+    /* The existing media queries for #home-room-cards are for wider screens.
+       We need to ensure a single column for the smallest mobile screens.
+       The existing queries are:
+        @media (min-width: 640px) { #home-room-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (min-width: 768px) { #home-room-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        For screens *below* 640px, it should naturally be single column if it's a flex or block container.
+        Let's ensure #home-room-cards is set up for that.
+    */
+    #home-room-cards { /* Base style for mobile, overridden by min-width queries for larger screens */
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem; /* Space between cards */
+        padding-left: 0; /* Remove any grid padding if it was there */
+        padding-right: 0;
+    }
+    #home-room-cards .room-card {
+        width: 100%; /* Full width for single column */
+        padding: 1.25rem; /* Mobile-friendly padding */
+        /* Other .room-card styles from previous step should be here or inherited */
+    }
+     .room-card .card-title-group .room-number {
+        font-size: 1.875rem; /* text-3xl, slightly adjusted */
+    }
+    .room-card .card-title-group .room-name {
+        font-size: 1rem; /* text-base or lg */
+    }
+    .room-card .card-total .total-amount {
+        font-size: 2.25rem; /* Adjusted for mobile emphasis */
+    }
+    .room-card .card-footer {
+        flex-direction: column;
+        gap: 0.75rem; /* Space between stacked buttons */
+    }
+    .room-card .card-footer .btn {
+        width: 100%;
+        padding: 1rem;
+        font-size: 1rem;
+    }
+
+    /* --- Profile Page (`profile.html`) --- */
+    /* Assuming a .profile-page-container */
+    .profile-page-container {
+        padding: 1rem 0; /* Vertical padding */
+    }
+    .profile-user-info {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .profile-user-info .avatar { /* Placeholder for avatar style */
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background-color: #475569; /* slate-600 */
+        margin: 0 auto 1rem;
+        /* Add display: flex, align-items, justify-content if there's an icon/image inside */
+    }
+     .profile-menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .profile-menu .menu-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.25rem; /* Touch-friendly padding */
+        border-bottom: 1px solid #334155; /* slate-700 */
+        text-decoration: none;
+        color: #CBD5E1; /* slate-300 */
+        font-size: 1rem;
+    }
+    .profile-menu .menu-item i.icon { /* Icon */
+        margin-right: 1rem;
+        color: #60A5FA; /* blue-400 */
+        font-size: 1.25rem;
+    }
+    .profile-menu .menu-item:last-child {
+        border-bottom: none;
+    }
+    .profile-page-container .btn-danger, /* For logout button */
+    .profile-page-container .btn-logout { /* Alternative class name */
+        width: calc(100% - 2.5rem); /* Full width within padded container */
+        margin: 2rem auto 0;
+        display: block;
+        padding: 1rem;
+        font-size: 1.1rem;
+    }
+
+    /* --- General Form Styles for Mobile --- */
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+    .form-label {
+        font-size: 0.9rem;
+        margin-bottom: 0.3rem;
+    }
+    .form-input {
+        padding: 1rem; /* Comfortable tap/type size */
+        font-size: 1rem;
+        /* Ensure width 100% is default or set here if needed */
+    }
+    .form-input:focus { /* Ensure focus states are clear */
+        border-color: #3B82F6; /* blue-500 */
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+    }
+
+    /* --- Button Styles for Mobile (General) --- */
+    .btn { /* Ensure base button is large enough */
+        padding: 0.9rem 1.5rem;
+        font-size: 1rem;
+        /* Other styles like border-radius, font-weight should be fine from base */
+    }
+    .btn-sm { /* If you need smaller buttons, define them explicitly */
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    /* --- Modal Styles for Mobile --- */
+    .modal-content {
+        width: 90%;
+        max-width: 400px; /* Max width for modals on mobile */
+        max-height: 85vh;
+    }
+    .modal-header {
+        padding: 1rem 1.25rem;
+    }
+    .modal-title {
+        font-size: 1.25rem; /* text-xl */
+    }
+    .modal-close-btn {
+        width: 2rem;
+        height: 2rem;
+        font-size: 1.25rem;
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+    .modal-body {
+        padding: 1.25rem;
+        font-size: 0.95rem;
+    }
+    .modal-footer {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column; /* Stack buttons in modal footer */
+        gap: 0.75rem;
+    }
+    .modal-footer .btn {
+        width: 100%; /* Make modal buttons full width */
+        margin-bottom: 0; /* Remove bottom margin as gap handles it */
+    }
+
+    /* === END: Mobile Specific Styles - Jules === */
+}
+/* Other existing media queries (min-width: 640px, 768px, 1024px, 1280px for #home-room-cards)
+   should remain as they are, they will apply for larger screens.
+   The new styles are within max-width: 768px, so they target smaller screens.
+*/
