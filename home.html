@@ -352,43 +352,7 @@
             </div>
         </div>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-           flatpickr("#bill-date", {
-               dateFormat: "d/m/Y",
-               defaultDate: "today",
-               theme: "dark"
-           });
-
-           const params = new URLSearchParams(window.location.search);
-           const room = params.get('room');
-           if (room) {
-               const roomHeader = document.getElementById('room-header');
-               if(roomHeader) roomHeader.textContent = `ประวัติค่าไฟ - ห้อง ${room}`;
-           }
-
-            // Initialize edit modal date picker
-           flatpickr("#add-room-due-date", {
-               dateFormat: "d/m/Y",
-               theme: "dark"
-           });
-           flatpickr("#add-room-date", {
-               dateFormat: "d/m/Y",
-               theme: "dark"
-           });
-           
-            // Initialize form date pickers
-           flatpickr("#bill-date", {
-               dateFormat: "d/m/Y",
-               defaultDate: "today",
-               theme: "dark"
-           });
-           flatpickr("#due-date", {
-               dateFormat: "d/m/Y",
-               defaultDate: new Date().fp_incr(15), // Default to 15 days from now
-               theme: "dark"
-           });
-       });
+    
     <!-- Bulk Data Entry Modal (Structure only, content populated by JS) -->
     <!-- The modal itself will be added dynamically by script.js -->
     
