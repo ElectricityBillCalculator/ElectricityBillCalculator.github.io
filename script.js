@@ -50,7 +50,43 @@ document.addEventListener('DOMContentLoaded', async function() {
              closeActionsMenu();
         }
     });
+
+    // Initialize Flatpickr for date fields
+    initializeFlatpickr();
 });
+
+// Initialize Flatpickr date pickers
+function initializeFlatpickr() {
+    const flatpickrConfig = {
+        dateFormat: "d/m/Y",
+        locale: "th",
+        allowInput: true // Allow manual input
+    };
+
+    // For Add Room Modal
+    if (document.getElementById('add-room-date')) {
+        const el = document.getElementById('add-room-date');
+        if (el._flatpickr) el._flatpickr.destroy();
+        flatpickr(el, { ...flatpickrConfig, defaultDate: "today" });
+    }
+    if (document.getElementById('add-room-due-date')) {
+        const el = document.getElementById('add-room-due-date');
+        if (el._flatpickr) el._flatpickr.destroy();
+        flatpickr(el, { ...flatpickrConfig, defaultDate: new Date().fp_incr(15) });
+    }
+
+    // For Bulk Data Modal
+    if (document.getElementById('bulk-date')) {
+        const el = document.getElementById('bulk-date');
+        if (el._flatpickr) el._flatpickr.destroy();
+        flatpickr(el, { ...flatpickrConfig, defaultDate: "today" });
+    }
+    if (document.getElementById('bulk-due-date')) {
+        const el = document.getElementById('bulk-due-date');
+        if (el._flatpickr) el._flatpickr.destroy();
+        flatpickr(el, { ...flatpickrConfig, defaultDate: new Date().fp_incr(15) });
+    }
+}
 
 function initializePageContent() {
     console.log('initializePageContent called');
@@ -3006,7 +3042,6 @@ async function populateBulkRoomsData() {
             return;
         }
 
-<<<<<<< HEAD
         roomsListContainer.innerHTML = sortedRooms.map(roomData => `
             <div class="bg-slate-800 rounded-lg p-4 border border-slate-600" data-room-id="${roomData.room}" data-room-name="${roomData.name || ''}">
                 <h4 class="text-lg font-semibold text-white mb-3 flex justify-between items-center">
@@ -3020,31 +3055,6 @@ async function populateBulkRoomsData() {
                     <div class="form-group mb-0">
                         <label class="form-label text-sm" for="bulk-current-${roomData.room}">มิเตอร์ไฟ (ปัจจุบัน)</label>
                         <input type="number" id="bulk-current-${roomData.room}" class="form-input text-sm" placeholder="เลขมิเตอร์">
-=======
-        // --- Create the full form HTML ---
-        const formHTML = `
-            <div class="space-y-6">
-                <!-- Section 1: Date & Rates -->
-                <fieldset class="bg-slate-700/50 rounded-xl p-5">
-                    <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2"><i class="fas fa-cogs text-violet-300"></i>ตั้งค่าโดยรวม</legend>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-                        <div class="form-group">
-                            <label class="form-label" for="bulk-date">วันที่บันทึก *</label>
-                            <input type="date" id="bulk-date" class="form-input" required placeholder="DD/MM/YYYY">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="bulk-due-date">วันครบกำหนด</label>
-                            <input type="date" id="bulk-due-date" class="form-input" placeholder="DD/MM/YYYY">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="bulk-electricity-rate">ค่าไฟ/หน่วย *</label>
-                            <input type="number" step="0.01" id="bulk-electricity-rate" class="form-input" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="bulk-water-rate">ค่าน้ำ/หน่วย</label>
-                            <input type="number" step="0.01" id="bulk-water-rate" class="form-input">
-                        </div>
->>>>>>> parent of 9f69a43 (แก้ กรอก ปฏิทิน)
                     </div>
                     <div class="form-group mb-0">
                         <label class="form-label text-sm" for="bulk-previous-${roomData.room}">มิเตอร์ไฟ (ก่อนหน้า)</label>
@@ -3074,6 +3084,9 @@ async function populateBulkRoomsData() {
                 inputsContainer.style.opacity = e.target.checked ? '1' : '0.5';
             });
         });
+
+        // Initialize Flatpickr for the newly created date inputs
+        initializeFlatpickr();
 
     } catch (error) {
         console.error("Error populating bulk rooms data:", error);
@@ -3183,6 +3196,11 @@ function openModal(modalId) {
     // Use setTimeout to allow the display property to apply before adding the class for transition
     setTimeout(() => {
         modal.classList.add('active');
+        
+        // Initialize Flatpickr for specific modals
+        if (modalId === 'add-room-modal') {
+            initializeFlatpickr();
+        }
     }, 10); 
 }
 

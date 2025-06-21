@@ -41,21 +41,163 @@
     <style>
         body { font-family: 'Kanit', sans-serif; }
         /* Custom styles for flatpickr dark theme */
-        .flatpickr-calendar.dark {
-            background: #1e293b; /* bg-slate-800 */
-            border-color: #334155; /* border-slate-700 */
+        .flatpickr-calendar {
+            background: #1e293b !important; /* bg-slate-800 */
+            border: 1px solid #334155 !important; /* border-slate-700 */
+            border-radius: 8px !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+            font-family: 'Kanit', sans-serif !important;
         }
-        .flatpickr-calendar.dark .flatpickr-month,
-        .flatpickr-calendar.dark .flatpickr-weekday,
-        .flatpickr-calendar.dark .flatpickr-day {
-            color: #e2e8f0; /* text-slate-200 */
+        
+        .flatpickr-calendar .flatpickr-months {
+            background: #334155 !important; /* bg-slate-700 */
+            border-radius: 8px 8px 0 0 !important;
+            padding: 8px 0 !important;
         }
-        .flatpickr-calendar.dark .flatpickr-day.selected {
-            background: #3b82f6; /* bg-blue-600 */
-            border-color: #3b82f6;
+        
+        .flatpickr-calendar .flatpickr-month {
+            color: #e2e8f0 !important; /* text-slate-200 */
+            fill: #e2e8f0 !important;
         }
-        .flatpickr-calendar.dark .flatpickr-day:hover {
-            background: #334155; /* bg-slate-700 */
+        
+        .flatpickr-calendar .flatpickr-current-month {
+            color: #e2e8f0 !important;
+            font-weight: 600 !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-monthDropdown-months {
+            background: #1e293b !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #475569 !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-weekday {
+            color: #94a3b8 !important; /* text-slate-400 */
+            font-weight: 500 !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-day {
+            color: #e2e8f0 !important; /* text-slate-200 */
+            border-radius: 4px !important;
+            margin: 1px !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-day:hover {
+            background: #475569 !important; /* bg-slate-600 */
+            color: #ffffff !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-day.selected {
+            background: #3b82f6 !important; /* bg-blue-600 */
+            border-color: #3b82f6 !important;
+            color: #ffffff !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-day.selected:hover {
+            background: #2563eb !important; /* bg-blue-700 */
+        }
+        
+        .flatpickr-calendar .flatpickr-day.today {
+            background: #1e40af !important; /* bg-blue-800 */
+            border-color: #1e40af !important;
+            color: #ffffff !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-day.today:hover {
+            background: #1d4ed8 !important; /* bg-blue-700 */
+        }
+        
+        .flatpickr-calendar .flatpickr-day.disabled {
+            color: #64748b !important; /* text-slate-500 */
+            background: transparent !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-day.disabled:hover {
+            background: transparent !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-day.prevMonthDay,
+        .flatpickr-calendar .flatpickr-day.nextMonthDay {
+            color: #64748b !important; /* text-slate-500 */
+        }
+        
+        .flatpickr-calendar .flatpickr-day.prevMonthDay:hover,
+        .flatpickr-calendar .flatpickr-day.nextMonthDay:hover {
+            background: #475569 !important;
+            color: #ffffff !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-months .flatpickr-prev-month,
+        .flatpickr-calendar .flatpickr-months .flatpickr-next-month {
+            color: #e2e8f0 !important;
+            fill: #e2e8f0 !important;
+            padding: 8px !important;
+            border-radius: 4px !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-months .flatpickr-prev-month:hover,
+        .flatpickr-calendar .flatpickr-months .flatpickr-next-month:hover {
+            background: #475569 !important;
+            color: #ffffff !important;
+            fill: #ffffff !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-current-month .flatpickr-monthDropdown-months {
+            background: #1e293b !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #475569 !important;
+            border-radius: 4px !important;
+            padding: 4px 8px !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-current-month .flatpickr-monthDropdown-months option {
+            background: #1e293b !important;
+            color: #e2e8f0 !important;
+        }
+        
+        /* Input field styling */
+        .flatpickr-input {
+            background: #0f172a !important; /* bg-slate-900 */
+            border: 1px solid #475569 !important; /* border-slate-600 */
+            color: #e2e8f0 !important;
+            border-radius: 6px !important;
+            padding: 8px 12px !important;
+        }
+        
+        .flatpickr-input:focus {
+            border-color: #3b82f6 !important; /* border-blue-500 */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+            outline: none !important;
+        }
+        
+        /* Ensure calendar appears above modals */
+        .flatpickr-calendar {
+            z-index: 9999 !important;
+        }
+        
+        /* Modal-specific calendar positioning */
+        .modal-backdrop .flatpickr-calendar {
+            position: absolute !important;
+        }
+        
+        /* Calendar arrow styling */
+        .flatpickr-calendar .flatpickr-months .flatpickr-prev-month svg,
+        .flatpickr-calendar .flatpickr-months .flatpickr-next-month svg {
+            width: 14px !important;
+            height: 14px !important;
+        }
+        
+        /* Year input styling */
+        .flatpickr-calendar .flatpickr-current-month input.cur-year {
+            background: transparent !important;
+            color: #e2e8f0 !important;
+            border: none !important;
+            font-weight: 600 !important;
+        }
+        
+        .flatpickr-calendar .flatpickr-current-month input.cur-year:focus {
+            outline: none !important;
+            box-shadow: none !important;
         }
     </style>
 </head>
@@ -220,8 +362,8 @@
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label" for="add-room-date">วันที่บันทึก (DD/MM/YYYY) *</label>
-                                        <input type="text" id="add-room-date" class="form-input" required placeholder="เช่น 25/12/2024"
-                                        class="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-center" />
+                                        <input type="text" id="add-room-date" class="form-input" required placeholder="เช่น 25/12/2024">
+                                    </div>
                                 </div>
                             </fieldset>
                             
@@ -276,18 +418,12 @@
                                 <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2"><i class="fas fa-file-invoice-dollar text-green-300"></i>ข้อมูลอื่นๆ</legend>
                                 <div class="grid grid-cols-2 gap-3 mt-4">
                                      <div class="form-group">
-<<<<<<< HEAD
                                         <label class="form-label" for="add-room-due-date">วันครบกำหนดชำระ</label>
                                         <input type="text" id="add-room-due-date" class="form-input" placeholder="เช่น 10/01/2025">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label" for="add-room-other">ค่าใช้จ่ายอื่นๆ</label>
                                         <input type="number" step="0.01" id="add-room-other" class="form-input" value="0">
-=======
-                                        <label class="form-label" for="add-room-due-date">วันที่ครบกำหนด (DD/MM/YYYY)</label>
-                                        <input type="text" id="add-room-due-date" class="form-input" placeholder="เช่น 31/12/2024"
-                                         class="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-center" />
->>>>>>> parent of 9f69a43 (แก้ กรอก ปฏิทิน)
                                     </div>
                                 </div>
                             </fieldset>
