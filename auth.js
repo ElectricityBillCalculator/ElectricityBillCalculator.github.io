@@ -88,45 +88,75 @@ const ROLE_PERMISSIONS = {
 // Check if user is authenticated. This should only be called once on page load.
 function checkAuth() {
     return new Promise((resolve) => {
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                try {
-                    // User is signed in. Fetch their data.
-                    const snapshot = await db.ref('users/' + user.uid).once('value');
-                    const userData = snapshot.val() || {}; // Ensure userData is an object
-                    
-                    // Construct the complete user object
-                    const fullUser = {
-                        uid: user.uid,
-                        email: user.email,
-                        name: userData.name || user.displayName,
-                        photoURL: userData.photoURL || user.photoURL,
-                        role: userData.role || 'user',
-                        createdAt: user.metadata.creationTime,
-                        metadata: { lastSignInTime: user.metadata.lastSignInTime },
-                        ...userData // Add other db fields
-                    };
-                    
-                    // Force 'admin' role and add demo data for specific email
-                    if (user.email === 'admin@electricity.com') {
-                        fullUser.role = 'admin';
-                        // Add demo data if it doesn't exist from DB
-                        if (!userData.name) fullUser.name = 'แอดมินทดสอบ';
-                        if (!userData.phone) fullUser.phone = '081-234-5678';
-                        if (!userData.address) fullUser.address = '123/456 ถนนพัฒนาการ กรุงเทพมหานคร 10250';
-                    }
-
-                    resolve(fullUser); // Resolve with the user object
-                } catch (error) {
-                    console.error("Error fetching user data:", error);
-                    resolve(null); // Resolve with null on error
+        console.log('checkAuth called');
+        console.log('Firebase auth object:', auth);
+        
+        if (!auth) {
+            console.error('Firebase auth not initialized');
+            resolve(null);
+            return;
+        }
+        
+        // Get current user immediately
+        const currentUser = auth.currentUser;
+        console.log('Current user from auth.currentUser:', currentUser);
+        
+        if (currentUser) {
+            // User is already signed in
+            handleAuthenticatedUser(currentUser, resolve);
+        } else {
+            // No current user, set up a one-time listener
+            const unsubscribe = auth.onAuthStateChanged(async (user) => {
+                console.log('Auth state changed:', user);
+                unsubscribe(); // Unsubscribe after first call
+                
+                if (user) {
+                    handleAuthenticatedUser(user, resolve);
+                } else {
+                    console.log('User is not signed in');
+                    resolve(null);
                 }
-            } else {
-                // User is not signed in.
-                resolve(null);
-            }
-        });
+            });
+        }
     });
+}
+
+// Helper function to handle authenticated user
+async function handleAuthenticatedUser(user, resolve) {
+    try {
+        console.log('User is signed in, fetching user data...');
+        // User is signed in. Fetch their data.
+        const snapshot = await db.ref('users/' + user.uid).once('value');
+        const userData = snapshot.val() || {}; // Ensure userData is an object
+        console.log('User data from DB:', userData);
+        
+        // Construct the complete user object
+        const fullUser = {
+            uid: user.uid,
+            email: user.email,
+            name: userData.name || user.displayName,
+            photoURL: userData.photoURL || user.photoURL,
+            role: userData.role || 'user',
+            createdAt: user.metadata.creationTime,
+            metadata: { lastSignInTime: user.metadata.lastSignInTime },
+            ...userData // Add other db fields
+        };
+        
+        // Force 'admin' role and add demo data for specific email
+        if (user.email === 'admin@electricity.com') {
+            fullUser.role = 'admin';
+            // Add demo data if it doesn't exist from DB
+            if (!userData.name) fullUser.name = 'แอดมินทดสอบ';
+            if (!userData.phone) fullUser.phone = '081-234-5678';
+            if (!userData.address) fullUser.address = '123/456 ถนนพัฒนาการ กรุงเทพมหานคร 10250';
+        }
+
+        console.log('Full user object:', fullUser);
+        resolve(fullUser); // Resolve with the user object
+    } catch (error) {
+        console.error("Error fetching user data:", error);
+        resolve(null); // Resolve with null on error
+    }
 }
 
 // Fetches all necessary user data from the database.
@@ -562,14 +592,28 @@ async function updateUserPassword(currentPassword, newPassword) {
 
 // Initialize authentication
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('DOMContentLoaded in auth.js');
+    console.log('Document body classes:', document.body.classList.toString());
+    
     if (document.body.classList.contains('requires-auth')) {
+        console.log('Page requires authentication, checking auth...');
         const user = await checkAuth();
+        console.log('checkAuth result:', user);
         window.currentUser = user; // Set global user object
 
         if (user) {
+            console.log('User authenticated, getting user data...');
             const userData = await getUserData(user.uid);
+            console.log('User data from getUserData:', userData);
+            
             window.currentUserRole = user.role; // Set global role for hasPermission()
             window.currentUserData = userData; // Make full user data from DB globally available for permissions
+            
+            console.log('Global variables set:', {
+                currentUser: window.currentUser,
+                currentUserRole: window.currentUserRole,
+                currentUserData: window.currentUserData
+            });
             
             // This is for profile.js and other modules needing auth functions
             window.auth = {
@@ -582,19 +626,31 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             updateAuthUI(user); // user here is the merged object from checkAuth()
             
-            if(typeof initializePageContent === 'function') {
-                initializePageContent();
-            }
+            console.log('Calling initializePageContent...');
+            // Add a small delay to ensure everything is properly initialized
+            setTimeout(() => {
+                if(typeof initializePageContent === 'function') {
+                    console.log('Calling initializePageContent function...');
+                    initializePageContent();
+                } else {
+                    console.error('initializePageContent function not found');
+                }
+            }, 50);
+            
             if(typeof initializeProfilePage === 'function') {
                 initializeProfilePage();
             }
         } else {
+            console.log('No user authenticated, redirecting to login...');
             window.location.href = 'login.html';
         }
+    } else {
+        console.log('Page does not require authentication');
     }
 
     // This listener is for the login page specifically.
     if (document.getElementById('loginForm')) {
+        console.log('Login form found, setting up auth state listener...');
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 // User is already logged in, redirect
