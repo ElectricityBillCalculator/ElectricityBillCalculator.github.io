@@ -9,10 +9,31 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="styles.css">
+
+    <!-- External Libraries -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
     <style>
         body { font-family: 'Kanit', sans-serif; }
         body.modal-open {
             overflow: hidden;
+        }
+        .flatpickr-calendar.dark {
+            background: #1e293b; /* bg-slate-800 */
+            border-color: #334155; /* border-slate-700 */
+        }
+        .flatpickr-calendar.dark .flatpickr-month,
+        .flatpickr-calendar.dark .flatpickr-weekday,
+        .flatpickr-calendar.dark .flatpickr-day {
+            color: #e2e8f0; /* text-slate-200 */
+        }
+        .flatpickr-calendar.dark .flatpickr-day.selected {
+            background: #3b82f6; /* bg-blue-600 */
+            border-color: #3b82f6;
+        }
+        .flatpickr-calendar.dark .flatpickr-day:hover {
+            background: #334155; /* bg-slate-700 */
         }
     </style>
 </head>
@@ -68,7 +89,9 @@
                      <button id="btn-add-room" class="btn btn-primary">
                         <i class="fas fa-plus-circle"></i>เพิ่มห้องใหม่
                 </button>
-                    <!-- Bulk add button will be added here by script.js -->
+                    <button id="btn-bulk-add" class="btn btn-accent hidden">
+                        <i class="fas fa-shipping-fast"></i>เพิ่มข้อมูลเร็ว
+                    </button>
                 </div>
             </div>
             <div id="home-room-cards" class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -202,23 +225,23 @@
                                 </div>
                             </fieldset>
                         </div>
-
-                        <!-- Right Column: Electricity & Due Date -->
+                        
+                        <!-- Right Column: Electricity & Other -->
                         <div class="flex flex-col gap-y-4">
                             <fieldset class="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
-                                <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2"><i class="fas fa-bolt text-yellow-300"></i>ข้อมูลค่าไฟ *</legend>
-                                 <div class="grid grid-cols-2 gap-3 mt-4">
+                                <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2"><i class="fas fa-bolt text-yellow-300"></i>ข้อมูลค่าไฟ</legend>
+                                <div class="grid grid-cols-2 gap-3 mt-4">
                                     <div class="form-group">
-                                        <label class="form-label" for="add-room-current">มิเตอร์ไฟ (ปัจจุบัน)</label>
+                                        <label class="form-label" for="add-room-current">มิเตอร์ไฟ (ปัจจุบัน) *</label>
                                         <input type="number" id="add-room-current" class="form-input" required>
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label" for="add-room-previous">มิเตอร์ไฟ (ก่อนหน้า)</label>
+                                        <label class="form-label" for="add-room-previous">มิเตอร์ไฟ (ก่อนหน้า) *</label>
                                         <input type="number" id="add-room-previous" class="form-input" required>
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label" for="add-room-rate">ค่าไฟ/หน่วย</label>
-                                        <input type="number" step="0.01" id="add-room-rate" class="form-input" required>
+                                        <label class="form-label" for="add-room-rate">ค่าไฟ/หน่วย *</label>
+                                        <input type="number" step="0.0001" id="add-room-rate" class="form-input" required>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label" for="add-room-totalall">ยอดรวมค่าไฟ (ถ้ามี)</label>
@@ -227,120 +250,166 @@
                                 </div>
                             </fieldset>
 
-                             <fieldset class="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
-                                <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2"><i class="fas fa-calendar-check text-red-300"></i>วันครบกำหนดชำระ</legend>
-                                <div class="space-y-3 mt-4">
+                            <fieldset class="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
+                                <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2"><i class="fas fa-file-invoice-dollar text-green-300"></i>ข้อมูลอื่นๆ</legend>
+                                <div class="grid grid-cols-2 gap-3 mt-4">
                                      <div class="form-group">
-                                        <label class="form-label" for="add-room-due-date">วันที่ครบกำหนด (DD/MM/YYYY)</label>
-                                        <input type="text" id="add-room-due-date" class="form-input" placeholder="เช่น 31/12/2024">
+                                        <label class="form-label" for="add-room-due-date">วันครบกำหนดชำระ</label>
+                                        <input type="text" id="add-room-due-date" class="form-input" placeholder="เช่น 10/01/2025">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="add-room-other">ค่าใช้จ่ายอื่นๆ</label>
+                                        <input type="number" step="0.01" id="add-room-other" class="form-input" value="0">
                                     </div>
                                 </div>
-                             </fieldset>
+                            </fieldset>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary w-full text-lg">
-                        <i class="fas fa-save"></i> บันทึกข้อมูล
+                    <button type="button" id="cancel-add-room" class="btn btn-secondary">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-2"></i>บันทึกข้อมูล
                     </button>
                 </div>
             </form>
         </div>
     </div>
-    
-    <!-- Add/Edit Tenant Modal -->
-    <div id="add-edit-tenant-modal" class="modal-backdrop z-[51] hidden">
-         <div class="modal-content max-w-lg">
-             <div class="modal-header">
-                 <h2 id="tenant-modal-title" class="text-xl font-bold text-white">เพิ่มลูกบ้านใหม่</h2>
-                 <button id="close-tenant-modal" type="button" class="modal-close-btn">
-                     <i class="fas fa-times"></i>
-                 </button>
-             </div>
-             <form id="add-edit-tenant-form" class="modal-body space-y-4">
-                 <input type="hidden" id="edit-tenant-id" name="tenantId" value="">
-                 
-                 <div>
-                     <label for="tenant-name" class="block text-sm font-medium text-slate-300 mb-2">ชื่อ-นามสกุล</label>
-                     <input type="text" id="tenant-name" name="name" required
-                            class="form-input" placeholder="ป้อนชื่อ-นามสกุลของลูกบ้าน">
-                 </div>
-                 
-                 <div>
-                     <label for="tenant-email" class="block text-sm font-medium text-slate-300 mb-2">อีเมล</label>
-                     <input type="email" id="tenant-email" name="email" required
-                            class="form-input" placeholder="ป้อนอีเมลสำหรับเข้าสู่ระบบ">
-                 </div>
-                 
-                 <div id="tenant-password-group">
-                     <label for="tenant-password" class="block text-sm font-medium text-slate-300 mb-2">รหัสผ่าน</label>
-                     <input type="password" id="tenant-password" name="password" required
-                            class="form-input" placeholder="ตั้งรหัสผ่านเริ่มต้น">
-                     <p id="password-help-text" class="text-xs text-slate-400 mt-1">(อย่างน้อย 6 ตัวอักษร)</p>
-                 </div>
-                 
-                 <div>
-                     <label for="tenant-status" class="block text-sm font-medium text-slate-300 mb-2">สถานะ</label>
-                     <select id="tenant-status" name="status" class="form-input">
-                         <option value="active">ใช้งาน</option>
-                         <option value="inactive">ระงับการใช้งาน</option>
-                     </select>
-                 </div>
-                 
-                 <div>
-                     <label class="block text-sm font-medium text-slate-300 mb-2">ห้องที่สามารถเข้าถึงได้</label>
-                     <div id="tenant-accessible-rooms-checkboxes" class="space-y-2 max-h-32 overflow-y-auto border border-slate-600 rounded-lg p-3 bg-slate-800/50">
-                         <!-- Checkboxes will be populated by JavaScript -->
-                     </div>
-                     <div id="no-managed-rooms-message" class="hidden">
-                         <p class="text-slate-400 text-sm">คุณยังไม่ได้กำหนดห้องที่ดูแลในระบบ</p>
-                     </div>
-                 </div>
-             </form>
-             <div class="modal-footer">
-                 <button type="button" id="cancel-tenant-button" class="btn btn-secondary" onclick="closeAddEditTenantModal()">ยกเลิก</button>
-                 <button type="submit" id="save-tenant-button" form="add-edit-tenant-form" class="btn btn-primary">
-                     <span id="save-tenant-button-text">เพิ่มลูกบ้าน</span>
-                 </button>
-             </div>
+
+
+    <!-- Bulk Data Entry Modal -->
+    <div id="bulk-data-modal" class="modal-backdrop">
+        <div class="modal-content max-w-4xl">
+            <div class="modal-header">
+                <h2 class="modal-title text-violet-400"><i class="fas fa-shipping-fast mr-3"></i>เพิ่มข้อมูลค่าไฟ-น้ำทุกห้อง</h2>
+                <button id="close-bulk-data-modal" class="modal-close-btn">&times;</button>
+            </div>
+            <form id="bulk-data-form">
+                <div class="modal-body space-y-6">
+                    <!-- Top section for dates and shared info -->
+                    <div class="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
+                        <h3 class="text-lg font-semibold text-white mb-4">ข้อมูลส่วนกลาง</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="form-group mb-0">
+                                <label class="form-label" for="bulk-bill-date">วันที่จด *</label>
+                                <input type="text" id="bulk-bill-date" class="form-input" required placeholder="เลือกวันที่">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label" for="bulk-due-date">วันครบกำหนด *</label>
+                                <input type="text" id="bulk-due-date" class="form-input" required placeholder="เลือกวันที่">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label" for="bulk-total-units">หน่วยไฟรวม (บ้าน)</label>
+                                <input type="number" id="bulk-total-units" class="form-input" placeholder="หน่วยรวม">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label" for="bulk-total-bill">ค่าไฟรวม (บ้าน)</label>
+                                <input type="number" id="bulk-total-bill" class="form-input" placeholder="ค่าไฟรวม">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Rooms List -->
+                    <div id="bulk-rooms-list" class="space-y-4 max-h-[50vh] overflow-y-auto p-1">
+                        <!-- Room entries will be populated here by script.js -->
+                         <p class="text-center text-gray-400 col-span-full py-8">กำลังโหลดข้อมูลห้องพัก...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="cancel-bulk-data" class="btn btn-secondary">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-2"></i>บันทึกข้อมูลทั้งหมด
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Evidence Modal -->
-    <div id="evidence-modal" class="modal-backdrop z-[52]">
-        <div class="modal-content max-w-lg">
-            <!-- Modal content refactored with new classes -->
+
+    <!-- Add Tenant Modal -->
+    <div id="add-tenant-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="tenant-modal-title" class="text-xl font-bold text-white">เพิ่มลูกบ้านใหม่</h2>
+                <button id="close-tenant-modal" type="button" class="modal-close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="add-tenant-form" class="modal-body space-y-4">
+                <input type="hidden" id="edit-tenant-id" name="tenantId" value="">
+                
+                <div>
+                    <label for="tenant-name" class="block text-sm font-medium text-slate-300 mb-2">ชื่อ-นามสกุล</label>
+                    <input type="text" id="tenant-name" name="name" required
+                           class="form-input" placeholder="ป้อนชื่อ-นามสกุลของลูกบ้าน">
+                </div>
+                
+                <div>
+                    <label for="tenant-email" class="block text-sm font-medium text-slate-300 mb-2">อีเมล</label>
+                    <input type="email" id="tenant-email" name="email" required
+                           class="form-input" placeholder="ป้อนอีเมลสำหรับเข้าสู่ระบบ">
+                </div>
+                
+                <div id="tenant-password-group">
+                    <label for="tenant-password" class="block text-sm font-medium text-slate-300 mb-2">รหัสผ่าน</label>
+                    <input type="password" id="tenant-password" name="password" required
+                           class="form-input" placeholder="ตั้งรหัสผ่านเริ่มต้น">
+                    <p id="password-help-text" class="text-xs text-slate-400 mt-1">(อย่างน้อย 6 ตัวอักษร)</p>
+                </div>
+                
+                <div>
+                    <label for="tenant-status" class="block text-sm font-medium text-slate-300 mb-2">สถานะ</label>
+                    <select id="tenant-status" name="status" class="form-input">
+                        <option value="active">ใช้งาน</option>
+                        <option value="inactive">ระงับการใช้งาน</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">ห้องที่สามารถเข้าถึงได้</label>
+                    <div id="tenant-accessible-rooms-checkboxes" class="space-y-2 max-h-32 overflow-y-auto border border-slate-600 rounded-lg p-3 bg-slate-800/50">
+                        <!-- Checkboxes will be populated by JavaScript -->
+                    </div>
+                    <div id="no-managed-rooms-message" class="hidden">
+                        <p class="text-slate-400 text-sm">คุณยังไม่ได้กำหนดห้องที่ดูแลในระบบ</p>
+                    </div>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="button" id="cancel-tenant-button" class="btn btn-secondary" onclick="closeAddTenantModal()">ยกเลิก</button>
+                <button type="submit" id="save-tenant-button" form="add-tenant-form" class="btn btn-primary">
+                    <span id="save-tenant-button-text">เพิ่มลูกบ้าน</span>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Confirm Modal (New generic confirm modal) -->
     <div id="confirm-modal" class="modal-backdrop z-[60]">
         <div class="modal-content max-w-sm text-center">
-            <div class="modal-body">
-                <div id="confirm-modal-icon" class="mx-auto mb-4 w-16 h-16 flex items-center justify-center rounded-full bg-red-500/20 text-red-500">
-                    <i class="fas fa-exclamation-triangle fa-2x"></i>
-                </div>
-                <h2 id="confirm-modal-title" class="text-xl font-bold text-white mb-2">ยืนยันการกระทำ</h2>
-                <p id="confirm-modal-text" class="text-slate-400 mb-6">คุณแน่ใจหรือไม่?</p>
-            </div>
-            <div class="modal-footer flex gap-4">
-                <button id="confirm-modal-cancel-btn" class="btn btn-secondary flex-1">ยกเลิก</button>
-                <button id="confirm-modal-confirm-btn" class="btn btn-danger flex-1">ยืนยัน</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Bulk Data Entry Modal (Structure only, content populated by JS) -->
-    <!-- The modal itself will be added dynamically by script.js -->
-    
+             <div class="modal-body">
+                 <div id="confirm-modal-icon" class="mx-auto mb-4 w-16 h-16 flex items-center justify-center rounded-full bg-red-500/20 text-red-500">
+                     <i class="fas fa-exclamation-triangle fa-2x"></i>
+                 </div>
+                 <h2 id="confirm-modal-title" class="text-xl font-bold text-white mb-2">ยืนยันการกระทำ</h2>
+                 <p id="confirm-modal-text" class="text-slate-400 mb-6">คุณแน่ใจหรือไม่?</p>
+             </div>
+             <div class="modal-footer flex gap-4">
+                 <button id="confirm-modal-cancel-btn" class="btn btn-secondary flex-1">ยกเลิก</button>
+                 <button id="confirm-modal-confirm-btn" class="btn btn-danger flex-1">ยืนยัน</button>
+             </div>
+         </div>
+     </div>
+  
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
+    <!-- Firebase Configuration -->
     <script>
-        // Firebase configuration
+        console.log('Firebase config script starting...');
         const firebaseConfig = {
             apiKey: "AIzaSyC2DvQt-VXfeEeip9thWXLKnstHmyx_eOk",
             authDomain: "electricity-bill-calcula-ea4a2.firebaseapp.com",
@@ -351,20 +420,95 @@
             appId: "1:79440126022:web:7ffbc16c6661bc75dc6a47",
             measurementId: "G-7JD6H3Q0PM"
         };
-        let db, analytics, auth;
+        
+        console.log('Firebase config:', firebaseConfig);
+        console.log('Firebase object available:', typeof firebase !== 'undefined');
+        
+        let db, analytics, auth, storage;
         try {
             if (!firebase.apps.length) {
+                console.log('Initializing Firebase app...');
                 const app = firebase.initializeApp(firebaseConfig);
                 analytics = firebase.analytics(app);
+                console.log('Firebase app initialized');
+            } else {
+                console.log('Firebase app already initialized');
             }
+            
+            console.log('Setting up Firebase services...');
             db = firebase.database();
             auth = firebase.auth();
+            storage = firebase.storage();
+            
+            console.log('Firebase services initialized:', {
+                db: !!db,
+                auth: !!auth,
+                storage: !!storage
+            });
+            
+            // Make Firebase objects globally available
+            window.db = db;
+            window.auth = auth;
+            window.storage = storage;
+            window.analytics = analytics;
+            
+            // Set a flag to indicate Firebase is ready
+            window.firebaseReady = true;
+            
+            console.log('Firebase initialized successfully');
         } catch (error) {
             console.error('Firebase initialization error:', error);
+            window.firebaseReady = false;
         }
     </script>
-    <script src="auth.js"></script>
-    <script src="script.js"></script>
-    <script src="tenantManagement.js"></script>
+
+    <!-- App Scripts -->
+    <script>
+        // Wait for Firebase to be ready before loading app scripts
+        function loadAppScripts() {
+            console.log('Loading app scripts...');
+            const authScript = document.createElement('script');
+            authScript.src = 'auth.js';
+            document.head.appendChild(authScript);
+            
+            const scriptScript = document.createElement('script');
+            scriptScript.src = 'script.js';
+            document.head.appendChild(scriptScript);
+            
+            const tenantScript = document.createElement('script');
+            tenantScript.src = 'tenantManagement.js';
+            document.head.appendChild(tenantScript);
+        }
+        
+        // Check if Firebase is ready
+        if (window.firebaseReady) {
+            loadAppScripts();
+        } else {
+            // Wait for Firebase to be ready
+            const checkFirebase = setInterval(() => {
+                if (window.firebaseReady) {
+                    clearInterval(checkFirebase);
+                    loadAppScripts();
+                }
+            }, 100);
+        }
+    </script>
+
+    <script>
+        // Inline script to initialize things that need to be ready fast
+        document.addEventListener('DOMContentLoaded', () => {
+            // Flatpickr for Add Room Modal
+            flatpickr("#add-room-date", {
+                dateFormat: "d/m/Y",
+                defaultDate: "today",
+                theme: "dark"
+            });
+            flatpickr("#add-room-due-date", {
+                dateFormat: "d/m/Y",
+                defaultDate: new Date().fp_incr(15),
+                theme: "dark"
+            });
+        });
+    </script>
 </body>
 </html> 
