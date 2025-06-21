@@ -475,105 +475,18 @@
         }
     </script>
     
-    <!-- IMPORTANT: Load app scripts here, before the final inline script -->
+    <!-- IMPORTANT: Load app scripts here -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Firebase SDK already included above -->
+    <!-- Firebase Init is inline above -->
+    <script src="promptpay.js" defer></script> <!-- Loaded in head, defer might be redundant but ok -->
     <script src="auth.js" defer></script>
-    <script src="script.js" defer></script>
-    
-    <script>
-         document.addEventListener('DOMContentLoaded', () => {
-            flatpickr("#bill-date", {
-                dateFormat: "d/m/Y",
-                defaultDate: "today",
-                theme: "dark"
-            });
+    <script src="firebaseService.js" defer></script>
+    <script src="uiHandlers.js" defer></script>
+    <script src="appLogic.js" defer></script>
+    <!-- The old script.js is no longer needed as its functionality is in appLogic.js -->
+    <!-- <script src="script.js" defer></script> -->
 
-            const params = new URLSearchParams(window.location.search);
-            const room = params.get('room');
-            if (room) {
-                const roomHeader = document.getElementById('room-header');
-                if(roomHeader) roomHeader.textContent = `ประวัติค่าไฟ - ห้อง ${room}`;
-            }
-
-             // Initialize edit modal date picker
-            flatpickr("#edit-date", {
-                dateFormat: "d/m/Y",
-                theme: "dark"
-            });
-            flatpickr("#edit-due-date", {
-                dateFormat: "d/m/Y",
-                theme: "dark"
-            });
-            
-             // Initialize form date pickers
-            flatpickr("#bill-date", {
-                dateFormat: "d/m/Y",
-                defaultDate: "today",
-                theme: "dark"
-            });
-            flatpickr("#due-date", {
-                dateFormat: "d/m/Y",
-                defaultDate: new Date().fp_incr(15), // Default to 15 days from now
-                theme: "dark"
-            });
-        });
-
-        function calculateRatePerUnit() {
-            const totalUnits = parseFloat(document.getElementById('total-units').value);
-            const totalBill = parseFloat(document.getElementById('total-all').value);
-            const rateInput = document.getElementById('rate');
-
-            if(totalUnits > 0 && totalBill > 0) {
-                const rate = totalBill / totalUnits;
-                rateInput.value = rate.toFixed(4);
-            } else {
-                rateInput.value = 0;
-            }
-        }
-
-        // Function to calculate totals in edit modal
-        function calculateEditTotals() {
-            // Calculate electricity total
-            const current = parseFloat(document.getElementById('edit-current').value) || 0;
-            const previous = parseFloat(document.getElementById('edit-previous').value) || 0;
-            const electricRate = parseFloat(document.getElementById('edit-rate').value) || 0;
-            const units = current - previous;
-            const total = units * electricRate;
-            
-            // Calculate water total
-            const currentWater = parseFloat(document.getElementById('edit-current-water').value) || 0;
-            const previousWater = parseFloat(document.getElementById('edit-previous-water').value) || 0;
-            const waterRate = parseFloat(document.getElementById('edit-water-rate').value) || 0;
-            const waterUnits = currentWater - previousWater;
-            const waterTotal = waterUnits * waterRate;
-            
-            // Update display elements
-            const electricityTotalElement = document.getElementById('edit-electricity-total');
-            const waterTotalElement = document.getElementById('edit-water-total');
-            
-            if (electricityTotalElement) {
-                electricityTotalElement.textContent = `฿${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            }
-            if (waterTotalElement) {
-                waterTotalElement.textContent = `฿${waterTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            }
-        }
-
-        // Add event listeners for automatic calculation in edit modal
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add event listeners for edit modal inputs
-            const editInputs = [
-                'edit-current', 'edit-previous', 'edit-rate',
-                'edit-current-water', 'edit-previous-water', 'edit-water-rate'
-            ];
-            
-            editInputs.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.addEventListener('input', calculateEditTotals);
-                }
-            });
-        });
-    </script>
+    <!-- Inline script block has been moved to appLogic.js -->
 </body>
 </html> 

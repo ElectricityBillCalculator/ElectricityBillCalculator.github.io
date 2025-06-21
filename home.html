@@ -383,20 +383,20 @@
             }
             db = firebase.database();
             auth = firebase.auth();
+            storage = firebase.storage(); // Initialize Firebase Storage
         } catch (error) {
             console.error('Firebase initialization error:', error);
         }
     </script>
-    <script src="auth.js"></script>
-    <script src="script.js"></script>
-    <script src="tenantManagement.js"></script> <!-- Added tenantManagement.js -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // auth.js handles the auth check and initial UI update.
-            // It will also call initializePageContent from script.js.
-            // initializePageContent in script.js should then call initializeLevel1OwnerInterface if role is '1'.
-            // This ensures everything happens in the correct order after user is authenticated.
-        });
-    </script>
+    <!-- Application Scripts -->
+    <script src="auth.js" defer></script>
+    <script src="firebaseService.js" defer></script>
+    <script src="uiHandlers.js" defer></script>
+    <script src="tenantManagement.js" defer></script>
+    <script src="appLogic.js" defer></script>
+    <!-- script.js is no longer the main orchestrator, appLogic.js is -->
+    <!-- <script src="script.js" defer></script> -->
+
+    <!-- No inline DOMContentLoaded listener needed here, appLogic.js handles it -->
 </body>
 </html> 
