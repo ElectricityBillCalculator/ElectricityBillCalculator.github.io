@@ -43,7 +43,43 @@ document.addEventListener('DOMContentLoaded', async function() {
              closeActionsMenu();
         }
     });
+
+    // Initialize Flatpickr for date fields
+    initializeFlatpickr();
 });
+
+// Initialize Flatpickr date pickers
+function initializeFlatpickr() {
+    const flatpickrConfig = {
+        dateFormat: "d/m/Y",
+        locale: "th",
+        allowInput: true // Allow manual input
+    };
+
+    // For Add Room Modal
+    if (document.getElementById('add-room-date')) {
+        const el = document.getElementById('add-room-date');
+        if (el._flatpickr) el._flatpickr.destroy();
+        flatpickr(el, { ...flatpickrConfig, defaultDate: "today" });
+    }
+    if (document.getElementById('add-room-due-date')) {
+        const el = document.getElementById('add-room-due-date');
+        if (el._flatpickr) el._flatpickr.destroy();
+        flatpickr(el, { ...flatpickrConfig, defaultDate: new Date().fp_incr(15) });
+    }
+
+    // For Bulk Data Modal
+    if (document.getElementById('bulk-date')) {
+        const el = document.getElementById('bulk-date');
+        if (el._flatpickr) el._flatpickr.destroy();
+        flatpickr(el, { ...flatpickrConfig, defaultDate: "today" });
+    }
+    if (document.getElementById('bulk-due-date')) {
+        const el = document.getElementById('bulk-due-date');
+        if (el._flatpickr) el._flatpickr.destroy();
+        flatpickr(el, { ...flatpickrConfig, defaultDate: new Date().fp_incr(15) });
+    }
+}
 
 function initializePageContent() {
     
@@ -2875,11 +2911,11 @@ async function populateBulkRoomsData() {
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
                         <div class="form-group">
                             <label class="form-label" for="bulk-date">วันที่บันทึก *</label>
-                            <input type="date" id="bulk-date" class="form-input" required placeholder="DD/MM/YYYY">
+                            <input type="text" id="bulk-date" class="form-input" required placeholder="DD/MM/YYYY">
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="bulk-due-date">วันครบกำหนด</label>
-                            <input type="date" id="bulk-due-date" class="form-input" placeholder="DD/MM/YYYY">
+                            <input type="text" id="bulk-due-date" class="form-input" placeholder="DD/MM/YYYY">
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="bulk-electricity-rate">ค่าไฟ/หน่วย *</label>
@@ -2931,6 +2967,9 @@ async function populateBulkRoomsData() {
         `;
 
         modalBody.innerHTML = formHTML;
+
+        // Initialize Flatpickr for the newly created date inputs
+        initializeFlatpickr();
 
     } catch (error) {
         console.error('Error populating bulk rooms data:', error);
@@ -3061,6 +3100,11 @@ function openModal(modalId) {
     // Use setTimeout to allow the display property to apply before adding the class for transition
     setTimeout(() => {
         modal.classList.add('active');
+        
+        // Initialize Flatpickr for specific modals
+        if (modalId === 'add-room-modal') {
+            initializeFlatpickr();
+        }
     }, 10); 
 }
 
