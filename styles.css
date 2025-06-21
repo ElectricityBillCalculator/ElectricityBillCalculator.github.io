@@ -397,9 +397,9 @@ body {
     transition: all 0.2s ease;
 }
 .form-input:focus {
-    border-color: #3b82f6; /* blue-500 */
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
     outline: none;
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 /* === Responsive Grid for Cards === */
@@ -439,43 +439,4 @@ body {
 .animate-on-load {
     animation-name: fadeInUp;
     animation-duration: 0.8s;
-}
-
-/* === Responsive Adjustments for Modals on Mobile === */
-@media (max-width: 640px) {
-    .modal-content {
-        padding: 0;
-        border-radius: 1rem;
-        max-height: 90vh;
-        margin: 0.5rem;
-        width: 100%;
-        max-width: calc(100vw - 1rem);
-    }
-    .modal-header {
-        padding: 1rem;
-    }
-    .modal-title {
-        font-size: 1.125rem;
-    }
-    .modal-body {
-        padding: 0.75rem;
-    }
-    .modal-footer {
-        padding: 1rem;
-    }
-
-    /* Bulk data modal specific adjustments */
-    #bulk-data-modal .grid {
-        /* Force single column layout */
-        grid-template-columns: 1fr !important;
-    }
-    
-    #bulk-data-modal fieldset {
-        padding: 0.75rem;
-    }
-}
-
-/* === Home Page Specific Grid for Room Cards === */
-@media (min-width: 640px) {
-    #home-room-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 } 
