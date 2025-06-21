@@ -46,12 +46,14 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 function initializePageContent() {
+    
     // Route to the correct function based on the current page
     if (document.getElementById('home-room-cards') || document.getElementById('level1-owner-tabs-container')) { // Check for L1 tabs too
         renderHomeRoomCards(); // This will now use global currentUser, currentUserRole, currentUserData
-        
+        console.log('Current user role:', window.currentUserRole);
         // Initialize Level 1 Owner specific UI if applicable
-        if (window.currentUserRole === '1') {
+        
+        if (window.currentUserRole == '1') {
             if (typeof initializeLevel1OwnerInterface === 'function') {
                 initializeLevel1OwnerInterface();
             } else {
