@@ -2875,7 +2875,7 @@ async function populateBulkRoomsData() {
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
                         <div class="form-group">
                             <label class="form-label" for="bulk-date">วันที่บันทึก *</label>
-                            <input type="text" id="bulk-date" class="form-input" required placeholder="DD/MM/YYYY">
+                            <input type="date" id="bulk-date" class="form-input" required placeholder="DD/MM/YYYY">
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="bulk-due-date">วันครบกำหนด</label>
