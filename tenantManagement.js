@@ -88,6 +88,7 @@ function switchL1OwnerTab(tabIdToActivate) {
 }
 
 function openAddEditTenantModal(tenantData = null) {
+    console.log("Opening Add/Edit Tenant Modal", tenantData);
     const modal = document.getElementById('add-edit-tenant-modal');
     const form = document.getElementById('add-edit-tenant-form');
     const modalTitle = document.getElementById('tenant-modal-title');
@@ -95,23 +96,36 @@ function openAddEditTenantModal(tenantData = null) {
     const passwordGroup = document.getElementById('tenant-password-group');
     const passwordInput = document.getElementById('tenant-password');
     const passwordHelpText = document.getElementById('password-help-text');
-    document.getElementById('edit-tenant-id').value = '';
-
+    const editTenantIdInput = document.getElementById('edit-tenant-id');
+    
+    // Add null checks for all elements
+    if (!modal || !form || !modalTitle || !saveButtonText || !passwordInput || !editTenantIdInput) {
+        console.error('Required modal elements not found');
+        return;
+    }
+    
+    editTenantIdInput.value = '';
     form.reset(); // Reset form for new entries or before populating for edit
     loadManagedRoomsForTenantModal(); // Ensure rooms are loaded/reloaded
 
     if (tenantData && tenantData.uid) { // Editing existing tenant
         modalTitle.textContent = 'แก้ไขข้อมูลลูกบ้าน';
         saveButtonText.textContent = 'บันทึกการเปลี่ยนแปลง';
-        document.getElementById('edit-tenant-id').value = tenantData.uid;
-        document.getElementById('tenant-name').value = tenantData.name || '';
-        document.getElementById('tenant-email').value = tenantData.email || '';
-        document.getElementById('tenant-email').disabled = true; // Usually email is not changed or requires special handling
+        editTenantIdInput.value = tenantData.uid;
+        
+        const tenantNameInput = document.getElementById('tenant-name');
+        const tenantEmailInput = document.getElementById('tenant-email');
+        const tenantStatusSelect = document.getElementById('tenant-status');
+        
+        if (tenantNameInput) tenantNameInput.value = tenantData.name || '';
+        if (tenantEmailInput) {
+            tenantEmailInput.value = tenantData.email || '';
+            tenantEmailInput.disabled = true; // Usually email is not changed or requires special handling
+        }
 
         passwordInput.required = false;
         passwordInput.placeholder = "ปล่อยว่างไว้หากไม่ต้องการเปลี่ยน";
         if(passwordHelpText) passwordHelpText.textContent = "(ปล่อยว่างไว้หากไม่ต้องการเปลี่ยน)";
-
 
         // Check accessible rooms
         if (tenantData.accessibleRooms && Array.isArray(tenantData.accessibleRooms)) {
@@ -122,25 +136,32 @@ function openAddEditTenantModal(tenantData = null) {
                 }
             });
         }
-        document.getElementById('tenant-status').value = tenantData.status || 'active';
+        if (tenantStatusSelect) tenantStatusSelect.value = tenantData.status || 'active';
 
     } else { // Adding new tenant
         modalTitle.textContent = 'เพิ่มลูกบ้านใหม่';
         saveButtonText.textContent = 'เพิ่มลูกบ้าน';
-        document.getElementById('tenant-email').disabled = false;
+        
+        const tenantEmailInput = document.getElementById('tenant-email');
+        if (tenantEmailInput) tenantEmailInput.disabled = false;
+        
         passwordInput.required = true;
         passwordInput.placeholder = "ตั้งรหัสผ่านเริ่มต้น";
-         if(passwordHelpText) passwordHelpText.textContent = "(อย่างน้อย 6 ตัวอักษร)";
+        if(passwordHelpText) passwordHelpText.textContent = "(อย่างน้อย 6 ตัวอักษร)";
     }
 
-    if (modal) modal.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    modal.classList.add('active');
 }
 
 function closeAddEditTenantModal() {
     const modal = document.getElementById('add-edit-tenant-modal');
+    const form = document.getElementById('add-edit-tenant-form');
+    const editTenantIdInput = document.getElementById('edit-tenant-id');
+    
     if (modal) modal.classList.add('hidden');
-    document.getElementById('add-edit-tenant-form').reset();
-    document.getElementById('edit-tenant-id').value = '';
+    if (form) form.reset();
+    if (editTenantIdInput) editTenantIdInput.value = '';
 }
 
 async function loadManagedRoomsForTenantModal() {
@@ -190,15 +211,35 @@ async function loadManagedRoomsForTenantModal() {
 async function handleAddEditTenantFormSubmit(event) {
     event.preventDefault();
     const saveButton = document.getElementById('save-tenant-button');
+    const saveButtonText = document.getElementById('save-tenant-button-text');
+    
+    if (!saveButton || !saveButtonText) {
+        console.error('Save button elements not found');
+        return;
+    }
+    
     saveButton.disabled = true;
-    const originalButtonText = document.getElementById('save-tenant-button-text').textContent;
-    document.getElementById('save-tenant-button-text').textContent = 'กำลังบันทึก...';
+    const originalButtonText = saveButtonText.textContent;
+    saveButtonText.textContent = 'กำลังบันทึก...';
 
-    const tenantId = document.getElementById('edit-tenant-id').value;
-    const name = document.getElementById('tenant-name').value.trim();
-    const email = document.getElementById('tenant-email').value.trim();
-    const password = document.getElementById('tenant-password').value; // Don't trim password
-    const status = document.getElementById('tenant-status').value;
+    const tenantIdInput = document.getElementById('edit-tenant-id');
+    const nameInput = document.getElementById('tenant-name');
+    const emailInput = document.getElementById('tenant-email');
+    const passwordInput = document.getElementById('tenant-password');
+    const statusSelect = document.getElementById('tenant-status');
+    
+    if (!tenantIdInput || !nameInput || !emailInput || !passwordInput || !statusSelect) {
+        console.error('Required form elements not found');
+        saveButton.disabled = false;
+        saveButtonText.textContent = originalButtonText;
+        return;
+    }
+
+    const tenantId = tenantIdInput.value;
+    const name = nameInput.value.trim();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value; // Don't trim password
+    const status = statusSelect.value;
 
     const selectedRoomCheckboxes = document.querySelectorAll('#tenant-accessible-rooms-checkboxes input[type="checkbox"]:checked');
     const accessibleRooms = Array.from(selectedRoomCheckboxes).map(cb => cb.value);
@@ -206,7 +247,7 @@ async function handleAddEditTenantFormSubmit(event) {
     if (!name || !email) {
         showAlert('กรุณากรอกชื่อและอีเมลของลูกบ้าน', 'error');
         saveButton.disabled = false;
-        document.getElementById('save-tenant-button-text').textContent = originalButtonText;
+        saveButtonText.textContent = originalButtonText;
         return;
     }
     if (accessibleRooms.length === 0) {
