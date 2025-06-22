@@ -96,6 +96,21 @@ function initializePageContent() {
             }
         }
         
+        // Add event listeners for admin tools
+        document.getElementById('btn-view-all-invoices')?.addEventListener('click', openAllInvoicesModal);
+        document.getElementById('btn-admin-panel')?.addEventListener('click', () => window.location.href = 'admin.html');
+        
+        // Add event listeners for all invoices modal
+        document.getElementById('close-all-invoices-modal')?.addEventListener('click', () => closeModal('all-invoices-modal'));
+        document.getElementById('close-all-invoices-modal-btn')?.addEventListener('click', () => closeModal('all-invoices-modal'));
+        document.getElementById('search-invoices')?.addEventListener('input', filterAllInvoices);
+        document.getElementById('filter-invoice-room')?.addEventListener('change', filterAllInvoices);
+        document.getElementById('filter-invoice-date')?.addEventListener('change', filterAllInvoices);
+        document.getElementById('invoices-prev-page')?.addEventListener('click', () => changeInvoicesPage(-1));
+        document.getElementById('invoices-next-page')?.addEventListener('click', () => changeInvoicesPage(1));
+        document.getElementById('export-invoices-csv')?.addEventListener('click', exportInvoicesToCSV);
+        document.getElementById('download-filtered-invoices-btn')?.addEventListener('click', downloadFilteredInvoices);
+        document.getElementById('download-selected-invoices-btn')?.addEventListener('click', downloadSelectedInvoices);
     } else if (document.getElementById('history-section')) {
         // This is the index.html page for a specific room
         const urlParams = new URLSearchParams(window.location.search);
@@ -4010,133 +4025,74 @@ async function generateInvoiceForRoom(roomId) {
     }
 }
 
-async function generateInvoice(billKey) {
-    if (!billKey) {
-        showAlert('ไม่สามารถสร้างใบแจ้งหนี้ได้: ไม่พบข้อมูลบิล', 'warning');
+async function generateInvoice(billId) {
+    if (!hasPermission('canGenerateInvoice')) {
+        showAlert('คุณไม่มีสิทธิ์สร้างใบแจ้งหนี้', 'error');
         return;
     }
 
-    const invoiceModal = document.getElementById('invoice-modal');
-    const invoiceBody = document.getElementById('invoice-modal-body');
-    const downloadBtn = document.getElementById('download-invoice-btn');
-    if (!invoiceModal || !invoiceBody || !downloadBtn) return;
-
     try {
-        // Show loading state
-        invoiceBody.innerHTML = `<div class="text-center p-8 text-slate-600"><i class="fas fa-spinner fa-spin text-3xl"></i><p class="mt-2">กำลังสร้างใบแจ้งหนี้...</p></div>`;
-        openModal('invoice-modal');
+        // Find the invoice data from the pre-loaded global array.
+        // This is faster and avoids potential Firebase security rule issues with direct gets.
+        const billData = window.allInvoicesData?.find(invoice => invoice.id === billId);
 
-        // 1. Fetch the specific bill
-        const billSnapshot = await db.ref(`electricityData/${billKey}`).once('value');
-        if (!billSnapshot.exists()) {
-            throw new Error('ไม่พบข้อมูลบิล');
+        if (!billData) {
+            // As a fallback, try to fetch directly if not found in the array.
+            // This might be necessary if called from a context where allInvoicesData is not populated.
+            console.warn(`Invoice ${billId} not found in local data, attempting direct fetch.`);
+            const billSnapshot = await db.ref(`electricityData/${billId}`).once('value');
+            if (!billSnapshot.exists()) {
+                throw new Error('ไม่พบข้อมูลบิล');
+            }
+            const fallbackData = { id: billSnapshot.key, ...billSnapshot.val() };
+            await displayAndHandleInvoice(fallbackData);
+            return;
         }
-        const billData = billSnapshot.val();
 
-        // 2. Fetch the corresponding room settings
-        const roomSnapshot = await db.ref(`rooms/${billData.room}`).once('value');
-        let roomData;
-        
-        if (roomSnapshot.exists()) {
-            roomData = roomSnapshot.val();
-        } else {
-            // If no room settings exist (legacy room), create a fallback object
-            console.warn(`[Invoice] No settings found for room ${billData.room}. Using fallback data.`);
-            roomData = {
-                rent: 0, // Assume 0 rent if not set
-                addons: [],
-                tenantName: billData.name || 'N/A' // Use name from the bill as a fallback
-            };
-        }
-        
-        // 3. Calculate all costs
-        const rent = Number(roomData.rent || 0);
-        const electricTotal = Number(billData.total || 0);
-        const waterTotal = Number(billData.waterTotal || 0);
-        const addons = roomData.addons || [];
-        const addonsTotal = addons.reduce((acc, addon) => acc + Number(addon.price || 0), 0);
-        const grandTotal = rent + electricTotal + waterTotal + addonsTotal;
-
-        // 4. Build invoice HTML
-        invoiceBody.innerHTML = `
-            <div id="invoice-content" class="p-6 bg-white text-gray-800 font-sans">
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900">ใบแจ้งค่าใช้จ่าย</h1>
-                        <p class="text-gray-500">สำหรับห้อง: <span class="font-semibold text-gray-700">${billData.room}</span></p>
-                        <p class="text-gray-500">ผู้เช่า: <span class="font-semibold text-gray-700">${roomData.tenantName || 'N/A'}</span></p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-sm text-gray-500">วันที่บันทึก: ${billData.date}</p>
-                        <p class="text-sm text-gray-500 font-bold text-red-600">กำหนดชำระ: ${billData.dueDate || 'ไม่มี'}</p>
-                    </div>
-                </div>
-
-                <div class="border-t border-b border-gray-200 py-4 mb-6">
-                    <div class="text-lg font-semibold mb-2 text-gray-700">สรุปค่าใช้จ่าย:</div>
-                    <table class="w-full">
-                        <tbody>
-                            <tr class="border-b border-gray-100">
-                                <td class="py-2">ค่าเช่าห้อง</td>
-                                <td class="text-right py-2">${rent.toLocaleString('en-US', { style: 'currency', currency: 'THB' })}</td>
-                            </tr>
-                            <tr class="border-b border-gray-100">
-                                <td class="py-2">ค่าไฟฟ้า (${billData.units} หน่วย)</td>
-                                <td class="text-right py-2">${electricTotal.toLocaleString('en-US', { style: 'currency', currency: 'THB' })}</td>
-                            </tr>
-                            <tr class="border-b border-gray-100">
-                                <td class="py-2">ค่าน้ำ (${billData.waterUnits || 0} หน่วย)</td>
-                                <td class="text-right py-2">${waterTotal.toLocaleString('en-US', { style: 'currency', currency: 'THB' })}</td>
-                            </tr>
-                            ${addons.map(addon => `
-                                <tr class="border-b border-gray-100">
-                                    <td class="py-2">${addon.name}</td>
-                                    <td class="text-right py-2">${Number(addon.price || 0).toLocaleString('en-US', { style: 'currency', currency: 'THB' })}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="text-right">
-                    <p class="text-gray-600">ยอดรวม</p>
-                    <p class="text-3xl font-bold text-gray-900">${grandTotal.toLocaleString('en-US', { style: 'currency', currency: 'THB' })}</p>
-                </div>
-
-                <div class="mt-8 pt-4 border-t border-gray-200 text-center">
-                    <p class="text-gray-600 font-semibold">ขอขอบคุณ</p>
-                </div>
-            </div>
-        `;
-
-        // 5. Add event listener for download
-        downloadBtn.onclick = () => {
-             // Temporarily set body background to white for capture
-            document.body.style.backgroundColor = 'white';
-            const invoiceContent = document.getElementById('invoice-content');
-            
-            html2canvas(invoiceContent, {
-                 scale: 2, // Improve quality
-                 backgroundColor: '#ffffff'
-            }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = `invoice-room-${billData.room}-${billData.date.replace(/\//g, '-')}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-                
-                // Revert body background
-                document.body.style.backgroundColor = '';
-            });
-        };
+        await displayAndHandleInvoice(billData);
 
     } catch (error) {
-        console.error("Error generating invoice:", error);
-        invoiceBody.innerHTML = `<p class="text-red-500 text-center p-8">${error.message}</p>`;
+        console.error('Error generating invoice:', error);
+        showAlert(`เกิดข้อผิดพลาดในการสร้างใบแจ้งหนี้: ${error.message}`, 'error');
     }
 }
 
-// Helper function to get the latest bill key for a room
+// Helper function to display the invoice and set up its handlers
+async function displayAndHandleInvoice(billData) {
+    const invoiceContent = await generateInvoiceHTML(billData);
+    if (!invoiceContent) {
+        throw new Error('ไม่สามารถสร้างเนื้อหาใบแจ้งหนี้ได้');
+    }
+
+    const modalBody = document.getElementById('invoice-modal-body');
+    const downloadBtn = document.getElementById('download-invoice-btn');
+    modalBody.innerHTML = invoiceContent;
+
+    // Setup download button
+    downloadBtn.onclick = async () => {
+        try {
+            const canvas = await generateInvoiceCanvas(billData);
+            const link = document.createElement('a');
+            const room = billData.room || 'unknown';
+            const date = billData.date ? billData.date.replace(/\//g, '-') : 'nodate';
+            link.download = `invoice-${room}-${date}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (dlError) {
+            console.error('Error during invoice download:', dlError);
+            showAlert('เกิดข้อผิดพลาดในการดาวน์โหลดใบแจ้งหนี้', 'error');
+        }
+    };
+
+    openModal('invoice-modal');
+}
+
 async function getLatestBillKeyForRoom(roomId) {
+    if (!hasPermission('canViewHistory', roomId)) {
+        showAlert('คุณไม่มีสิทธิ์ดูประวัติของห้อง', 'error');
+        return null;
+    }
+
     try {
         const snapshot = await db.ref('electricityData')
             .orderByChild('room')
@@ -5058,3 +5014,509 @@ function setupCSVUpload() {
 document.addEventListener('DOMContentLoaded', function() {
     setupCSVUpload();
 });
+
+// --- All Invoices Management Functions ---
+
+// Global variables for all invoices
+let allInvoicesData = [];
+let filteredInvoicesData = [];
+let currentInvoicesPage = 1;
+const INVOICES_PER_PAGE = 10;
+
+async function openAllInvoicesModal() {
+    openModal('all-invoices-modal');
+    await loadAllInvoices();
+}
+
+async function loadAllInvoices() {
+    console.log("Loading all invoices...");
+    const tbody = document.getElementById('all-invoices-table-body');
+    const loadingRow = `
+        <tr>
+            <td colspan="9" class="text-center py-10 text-slate-400">
+                <i class="fas fa-spinner fa-spin text-2xl mb-3"></i><br>
+                กำลังโหลดข้อมูลใบแจ้งหนี้...
+            </td>
+        </tr>
+    `;
+
+    if (tbody) tbody.innerHTML = loadingRow;
+
+    try {
+        const rawData = await loadFromFirebase(); 
+        
+        allInvoicesData = rawData
+        .filter(bill => {
+            if (!bill.date) {
+                console.warn('Found bill/invoice without a date, it will be excluded from the "All Invoices" table:', bill);
+                return false;
+            }
+            return true;
+        })
+        .map(bill => {
+            // This logic is simplified from a previous version.
+            // Ensure costs are calculated correctly.
+            const electricityCost = bill.total || 0;
+            const waterCost = bill.waterTotal || 0;
+            const rentCost = bill.rent || 0;
+            const totalCost = electricityCost + waterCost + rentCost;
+            
+            return {
+                key: bill.key,
+                room: bill.room,
+                name: bill.name,
+                date: bill.date,
+                electricityCost: electricityCost,
+                waterCost: waterCost,
+                rentCost: rentCost,
+                totalCost: totalCost,
+                dueDate: bill.dueDate,
+                paymentConfirmed: bill.paymentConfirmed || false,
+                evidenceUrl: bill.evidenceUrl,
+                timestamp: bill.timestamp
+            };
+        });
+
+        // Sort by date (newest first)
+        allInvoicesData.sort((a, b) => b.timestamp - a.timestamp);
+        
+        filteredInvoicesData = [...allInvoicesData];
+        
+        // Populate filter options
+        populateInvoiceFilters();
+        
+        // Render table
+        renderAllInvoicesTable();
+        
+    } catch (error) {
+        console.error('Error loading all invoices:', error);
+        showAlert('เกิดข้อผิดพลาดในการโหลดข้อมูลใบแจ้งหนี้', 'error');
+    }
+}
+
+function populateInvoiceFilters() {
+    const roomSelect = document.getElementById('filter-invoice-room');
+    const dateSelect = document.getElementById('filter-invoice-date');
+    if (!roomSelect || !dateSelect) return;
+
+    const uniqueRooms = [...new Set(allInvoicesData.map(inv => inv.room))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    const uniqueDates = [...new Set(allInvoicesData.map(inv => inv.date ? inv.date.substring(3) : null))].filter(Boolean).sort((a, b) => {
+        const [monthA, yearA] = a.split('/');
+        const [monthB, yearB] = b.split('/');
+        return new Date(yearB, monthB - 1) - new Date(yearA, monthA - 1);
+    });
+
+    roomSelect.innerHTML = '<option value="">ทุกห้อง</option>' + uniqueRooms.map(room => `<option value="${room}">${room}</option>`).join('');
+    
+    dateSelect.innerHTML = '<option value="">ทุกเดือน</option>' + uniqueDates.map(date => {
+        const [month, year] = date.split('/');
+        return `<option value="${date}">${getThaiMonth(month)} ${year}</option>`;
+    }).join('');
+
+    // Enable download by room button if a room is selected
+    roomSelect.addEventListener('change', () => {
+        const downloadBtn = document.getElementById('download-filtered-invoices-btn');
+        if (downloadBtn) {
+            downloadBtn.disabled = !roomSelect.value;
+             downloadBtn.title = roomSelect.value ? `ดาวน์โหลดใบแจ้งหนี้ทั้งหมดของห้อง ${roomSelect.value}` : 'กรุณาเลือกห้องก่อน';
+        }
+    });
+}
+
+function renderAllInvoicesTable() {
+    const tbody = document.getElementById('all-invoices-table-body');
+    if (!tbody) return;
+
+    const startIndex = (currentInvoicesPage - 1) * INVOICES_PER_PAGE;
+    const endIndex = startIndex + INVOICES_PER_PAGE;
+    const paginatedInvoices = filteredInvoicesData.slice(startIndex, endIndex);
+
+    if (paginatedInvoices.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center py-10 text-slate-400">
+                    <i class="fas fa-search text-2xl mb-3"></i><br>
+                    ไม่พบใบแจ้งหนี้ที่ตรงกับเงื่อนไข
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = paginatedInvoices.map(invoice => {
+        const totalCost = (invoice.total || 0) + (invoice.waterTotal || 0) + (invoice.rent || 0);
+        const addonTotal = invoice.addons?.reduce((sum, addon) => sum + (parseFloat(addon.price) || 0), 0) || 0;
+        invoice.totalCost = totalCost + addonTotal;
+
+        const canDelete = hasPermission('canDeleteBills', invoice.room);
+
+        return `
+            <tr class="hover:bg-slate-700/50">
+                <td class="px-2 py-3 text-center">
+                    <input type="checkbox" class="invoice-select-checkbox form-checkbox bg-slate-900 border-slate-600 text-green-500 focus:ring-green-500" data-invoice-id="${invoice.id}">
+                </td>
+                <td class="px-4 py-3 font-medium text-white">${invoice.room}</td>
+                <td class="px-4 py-3 text-slate-300">${invoice.name}</td>
+                <td class="px-4 py-3 text-slate-400">${invoice.date}</td>
+                <td class="px-4 py-3 text-right">${(invoice.total || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
+                <td class="px-4 py-3 text-right">${(invoice.waterTotal || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
+                <td class="px-4 py-3 text-right">${(invoice.rent || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
+                <td class="px-4 py-3 text-right font-bold text-white">${invoice.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
+                <td class="px-4 py-3 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="generateInvoice('${invoice.id}')" class="text-green-400 hover:text-green-300 transition-colors" title="ดูใบแจ้งหนี้">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </button>
+                        ${canDelete ? `<button onclick="handleDeleteBill('${invoice.id}')" class="text-red-400 hover:text-red-300 transition-colors" title="ลบใบแจ้งหนี้">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>` : ''}
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    addInvoiceSelectionListeners();
+}
+
+function addInvoiceSelectionListeners() {
+    const selectAllCheckbox = document.getElementById('select-all-invoices-checkbox');
+    const itemCheckboxes = document.querySelectorAll('.invoice-select-checkbox');
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', (e) => {
+            itemCheckboxes.forEach(checkbox => {
+                checkbox.checked = e.target.checked;
+            });
+            updateDownloadSelectedButtonState();
+        });
+    }
+
+    itemCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            if (!checkbox.checked) {
+                if(selectAllCheckbox) selectAllCheckbox.checked = false;
+            }
+            updateDownloadSelectedButtonState();
+        });
+    });
+}
+
+function updateDownloadSelectedButtonState() {
+    const downloadBtn = document.getElementById('download-selected-invoices-btn');
+    if (!downloadBtn) return;
+
+    const selectedCheckboxes = document.querySelectorAll('.invoice-select-checkbox:checked');
+    
+    if (selectedCheckboxes.length > 0) {
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = `<i class="fas fa-download"></i> ดาวน์โหลดที่เลือก (${selectedCheckboxes.length})`;
+    } else {
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = `<i class="fas fa-download"></i> ดาวน์โหลดที่เลือก`;
+    }
+}
+
+function updateInvoicesPagination(total, start, end) {
+    document.getElementById('invoices-total').textContent = total;
+    document.getElementById('invoices-start').textContent = start;
+    document.getElementById('invoices-end').textContent = end;
+}
+
+function updateInvoicesPaginationButtons(totalPages) {
+    const prevBtn = document.getElementById('invoices-prev-page');
+    const nextBtn = document.getElementById('invoices-next-page');
+    
+    prevBtn.disabled = currentInvoicesPage <= 1;
+    nextBtn.disabled = currentInvoicesPage >= totalPages;
+}
+
+function changeInvoicesPage(direction) {
+    const newPage = currentInvoicesPage + direction;
+    const totalPages = Math.ceil(filteredInvoicesData.length / INVOICES_PER_PAGE);
+    
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentInvoicesPage = newPage;
+        renderAllInvoicesTable();
+    }
+}
+
+function filterAllInvoices() {
+    const searchTerm = document.getElementById('search-invoices').value.toLowerCase();
+    const roomFilter = document.getElementById('filter-invoice-room').value;
+    const dateFilter = document.getElementById('filter-invoice-date').value;
+    
+    filteredInvoicesData = allInvoicesData.filter(invoice => {
+        const matchesSearch = !searchTerm || 
+            invoice.room.toLowerCase().includes(searchTerm) ||
+            (invoice.name && invoice.name.toLowerCase().includes(searchTerm)) ||
+            (invoice.date && invoice.date.toLowerCase().includes(searchTerm));
+        
+        const matchesRoom = !roomFilter || invoice.room === roomFilter;
+        
+        const matchesDate = !dateFilter || (invoice.date && invoice.date.includes(dateFilter));
+        
+        return matchesSearch && matchesRoom && matchesDate;
+    });
+    
+    currentInvoicesPage = 1; // Reset to first page
+    renderAllInvoicesTable();
+}
+
+function exportInvoicesToCSV() {
+    if (filteredInvoicesData.length === 0) {
+        showAlert('ไม่พบข้อมูลสำหรับส่งออก', 'warning');
+        return;
+    }
+    
+    const headers = [
+        'ห้อง', 'ชื่อผู้เช่า', 'วันที่', 'ค่าไฟ (฿)', 'ค่าน้ำ (฿)', 
+        'ค่าเช่า (฿)', 'รวม (฿)', 'วันครบกำหนด', 'สถานะการชำระ'
+    ];
+    
+    const csvData = filteredInvoicesData.map(invoice => [
+        invoice.room,
+        invoice.name || '',
+        invoice.date || '',
+        invoice.electricityCost,
+        invoice.waterCost,
+        invoice.rentCost,
+        invoice.totalCost,
+        invoice.dueDate || '',
+        invoice.paymentConfirmed ? 'ชำระแล้ว' : 'ยังไม่ชำระ'
+    ]);
+    
+    const csvContent = [headers, ...csvData]
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `ใบแจ้งหนี้_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showAlert('ส่งออกไฟล์ CSV สำเร็จ', 'success');
+}
+
+function getThaiMonth(monthNum) {
+    const thaiMonths = [
+        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+    return thaiMonths[parseInt(monthNum) - 1] || '';
+}
+
+async function downloadFilteredInvoices() {
+    const roomSelect = document.getElementById('filter-invoice-room');
+    if (!roomSelect) return;
+    const selectedRoom = roomSelect.value;
+
+    if (!selectedRoom) {
+        showAlert('กรุณาเลือกห้องที่ต้องการดาวน์โหลด', 'warning');
+        return;
+    }
+
+    const invoicesToDownload = allInvoicesData.filter(invoice => invoice.room === selectedRoom);
+
+    if (invoicesToDownload.length === 0) {
+        showAlert(`ไม่พบใบแจ้งหนี้สำหรับห้อง ${selectedRoom}`, 'info');
+        return;
+    }
+
+    const downloadBtn = document.getElementById('download-filtered-invoices-btn');
+    if (!downloadBtn) return;
+    const originalBtnHTML = downloadBtn.innerHTML;
+    downloadBtn.disabled = true;
+
+    for (let i = 0; i < invoicesToDownload.length; i++) {
+        const invoice = invoicesToDownload[i];
+        downloadBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> กำลังดาวน์โหลด... (${i + 1}/${invoicesToDownload.length})`;
+        try {
+            await generateInvoice(invoice.id); 
+            const downloadInvoiceBtn = document.getElementById('download-invoice-btn');
+            if(downloadInvoiceBtn) {
+                downloadInvoiceBtn.click();
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            } else {
+                 throw new Error("Download button inside invoice modal not found.");
+            }
+            closeModal('invoice-modal');
+        } catch (error) {
+            console.error(`Failed to download invoice for id ${invoice.id}:`, error);
+            showAlert(`เกิดข้อผิดพลาดในการดาวน์โหลดใบแจ้งหนี้สำหรับห้อง ${invoice.room}`, 'error');
+            break; 
+        }
+    }
+
+    downloadBtn.innerHTML = originalBtnHTML;
+    downloadBtn.disabled = false;
+    showAlert(`ดาวน์โหลดใบแจ้งหนี้สำหรับห้อง ${selectedRoom} เสร็จสิ้น`, 'success');
+}
+
+async function downloadSelectedInvoices() {
+    const selectedCheckboxes = document.querySelectorAll('.invoice-select-checkbox:checked');
+    const keysToDownload = Array.from(selectedCheckboxes).map(cb => cb.dataset.key);
+
+    if (keysToDownload.length === 0) {
+        showAlert('กรุณาเลือกใบแจ้งหนี้ที่ต้องการดาวน์โหลด', 'warning');
+        return;
+    }
+
+    const downloadBtn = document.getElementById('download-selected-invoices-btn');
+    if(!downloadBtn) return;
+    const originalBtnHTML = downloadBtn.innerHTML;
+    downloadBtn.disabled = true;
+
+    for (let i = 0; i < keysToDownload.length; i++) {
+        const key = keysToDownload[i];
+        downloadBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> กำลังดาวน์โหลด... (${i + 1}/${keysToDownload.length})`;
+        try {
+            await generateInvoice(key);
+            const downloadInvoiceBtn = document.getElementById('download-invoice-btn');
+            if (downloadInvoiceBtn) {
+                downloadInvoiceBtn.click();
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            } else {
+                 throw new Error("Download button inside invoice modal not found.");
+            }
+            closeModal('invoice-modal');
+        } catch (error) {
+            console.error(`Failed to download invoice for key ${key}:`, error);
+            showAlert(`เกิดข้อผิดพลาดในการดาวน์โหลดใบแจ้งหนี้ (ID: ${key})`, 'error');
+            break;
+        }
+    }
+
+    downloadBtn.innerHTML = originalBtnHTML;
+    downloadBtn.disabled = false;
+    updateDownloadSelectedButtonState();
+    showAlert(`ดาวน์โหลด ${keysToDownload.length} รายการเสร็จสิ้น`, 'success');
+}
+
+function updateInvoicesPaginationUI() {
+    const totalItems = filteredInvoicesData.length;
+    const totalPages = Math.ceil(totalItems / INVOICES_PER_PAGE);
+
+    // Ensure currentPage is valid, especially after filtering reduces total pages
+    if (totalItems === 0) {
+        currentInvoicesPage = 1;
+    } else {
+        currentInvoicesPage = Math.max(1, Math.min(currentInvoicesPage, totalPages));
+    }
+    
+    const startIndex = (currentInvoicesPage - 1) * INVOICES_PER_PAGE;
+    const endIndex = Math.min(startIndex + INVOICES_PER_PAGE, totalItems);
+
+    // Update text display
+    const totalEl = document.getElementById('invoices-total');
+    const startEl = document.getElementById('invoices-start');
+    const endEl = document.getElementById('invoices-end');
+
+    if (totalEl) totalEl.textContent = totalItems;
+    if (startEl) startEl.textContent = totalItems > 0 ? startIndex + 1 : 0;
+    if (endEl) endEl.textContent = endIndex;
+    
+    // Update buttons
+    updateInvoicesPaginationButtons(totalPages);
+}
+
+function updateInvoicesPaginationButtons(totalPages) {
+    const prevBtn = document.getElementById('invoices-prev-page');
+    const nextBtn = document.getElementById('invoices-next-page');
+
+    if (!prevBtn || !nextBtn) return;
+
+    prevBtn.disabled = currentInvoicesPage <= 1;
+    nextBtn.disabled = currentInvoicesPage >= totalPages;
+}
+
+function changeInvoicesPage(direction) {
+    const newPage = currentInvoicesPage + direction;
+    const totalPages = Math.ceil(filteredInvoicesData.length / INVOICES_PER_PAGE);
+
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentInvoicesPage = newPage;
+        renderAllInvoicesTable();
+        updateInvoicesPaginationUI();
+    }
+}
+
+function filterAllInvoices() {
+    const searchTerm = document.getElementById('search-invoices').value.toLowerCase();
+    const roomFilter = document.getElementById('filter-invoice-room').value;
+    const dateFilter = document.getElementById('filter-invoice-date').value;
+
+    if (!allInvoicesData) {
+        return; 
+    }
+
+    filteredInvoicesData = allInvoicesData.filter(invoice => {
+        // Robust search term matching
+        const roomStr = String(invoice.room || '').toLowerCase();
+        const nameStr = String(invoice.name || '').toLowerCase();
+        const dateStr = String(invoice.date || '').toLowerCase();
+        
+        const matchesSearch = searchTerm === '' ||
+            roomStr.includes(searchTerm) ||
+            nameStr.includes(searchTerm) ||
+            dateStr.includes(searchTerm);
+
+        // Room filter logic
+        const matchesRoom = roomFilter === '' || invoice.room === roomFilter;
+
+        // Date filter logic (Month/Year)
+        const invoiceMonthYear = invoice.date ? String(invoice.date).substring(3) : '';
+        const matchesDate = dateFilter === '' || invoiceMonthYear === dateFilter;
+
+        return matchesSearch && matchesRoom && matchesDate;
+    });
+
+    currentInvoicesPage = 1; // Reset to the first page after filtering
+    renderAllInvoicesTable();
+    updateInvoicesPaginationUI();
+}
+
+function exportInvoicesToCSV() {
+    if (!filteredInvoicesData || filteredInvoicesData.length === 0) {
+        showAlert('ไม่มีข้อมูลสำหรับส่งออก', 'warning');
+        return;
+    }
+    
+    const headers = [
+        'ห้อง', 'ชื่อผู้เช่า', 'วันที่', 'ค่าไฟ (฿)', 'ค่าน้ำ (฿)', 
+        'ค่าเช่า (฿)', 'รวม (฿)', 'วันครบกำหนด', 'สถานะการชำระ'
+    ];
+    
+    const csvData = filteredInvoicesData.map(invoice => [
+        invoice.room,
+        invoice.name || '',
+        invoice.date || '',
+        invoice.electricityCost,
+        invoice.waterCost,
+        invoice.rentCost,
+        invoice.totalCost,
+        invoice.dueDate || '',
+        invoice.paymentConfirmed ? 'ชำระแล้ว' : 'ยังไม่ชำระ'
+    ]);
+    
+    const csvContent = [headers, ...csvData]
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `ใบแจ้งหนี้_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showAlert('ส่งออกไฟล์ CSV สำเร็จ', 'success');
+}

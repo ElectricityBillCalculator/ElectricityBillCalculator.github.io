@@ -482,12 +482,20 @@ function updateAuthUI(user) {
         if (adminToolsContainer) {
             if (user.role === 'admin') {
                 console.log("[Auth] User is admin, showing admin tools.");
-                adminToolsContainer.innerHTML = `
-                    <button onclick="migrateOldData()" class="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full font-bold text-lg shadow flex items-center gap-2 transition-all duration-200 border border-yellow-600">
-                        <i class="fas fa-database"></i> อัปเดตข้อมูลเก่า
-                    </button>`;
+                // Don't override the HTML content, just show the container
+                // The buttons are already defined in the HTML
+                
+                // Show admin tools container
+                const adminToolsContainerElement = document.getElementById('admin-tools-container');
+                if (adminToolsContainerElement) {
+                    adminToolsContainerElement.classList.remove('hidden');
+                }
             } else {
-                adminToolsContainer.innerHTML = ''; // Ensure non-admins see nothing.
+                // Hide admin tools container for non-admins
+                const adminToolsContainerElement = document.getElementById('admin-tools-container');
+                if (adminToolsContainerElement) {
+                    adminToolsContainerElement.classList.add('hidden');
+                }
             }
         }
 
