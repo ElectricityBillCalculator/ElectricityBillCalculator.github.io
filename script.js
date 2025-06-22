@@ -131,7 +131,7 @@ function getAmountColorClass(amount) {
 function updateRoomStatusSummary(total, occupied, vacant) {
     const summaryContainer = document.getElementById('room-status-summary');
     if (!summaryContainer) return;
-
+    
     summaryContainer.innerHTML = `
         <span class="flex items-center gap-2" title="ห้องทั้งหมด">
             <i class="fas fa-th-large text-slate-400"></i>
@@ -154,10 +154,12 @@ function sortRooms(rooms) {
 }
 
 async function renderHomeRoomCards() {
+    
     const cardsContainer = document.getElementById('home-room-cards');
     if (!cardsContainer) {
         return;
     }
+
     cardsContainer.innerHTML = '<p class="text-center text-gray-400 col-span-full py-8">กำลังโหลดข้อมูลห้องพัก (เริ่มต้น)...</p>';
 
     try {
@@ -174,7 +176,7 @@ async function renderHomeRoomCards() {
         const userData = window.currentUserData;
         
         let displayableRoomIds = allRoomIds; 
-
+        
         if (userRole === 'admin') {
             if (userData && userData.buildingCode) {
                 displayableRoomIds = allRoomIds.filter(roomId => {
@@ -187,7 +189,7 @@ async function renderHomeRoomCards() {
         } else if (userRole === 'level1_tenant' && userData && userData.accessibleRooms) {
             displayableRoomIds = allRoomIds.filter(roomId => userData.accessibleRooms.includes(roomId));
         }
-
+        
         if (displayableRoomIds.length === 0) {
             cardsContainer.innerHTML = '<p class="text-center text-gray-400 col-span-full py-8">ไม่พบข้อมูลห้องพักที่คุณมีสิทธิ์เข้าถึง</p>';
             updateRoomStatusSummary(0, 0, 0);
@@ -220,10 +222,10 @@ async function renderHomeRoomCards() {
                 vacantCount++;
             }
         });
+        
         updateRoomStatusSummary(displayableRoomIds.length, occupiedCount, vacantCount);
-
         const sortedRooms = sortRooms(window.allRoomsData);
-
+       
         buildCardContainer(cardsContainer, sortedRooms);
 
     } catch (error) {
@@ -234,8 +236,8 @@ async function renderHomeRoomCards() {
 }
 
 function buildCardContainer(cardsContainer, sortedRooms) {
+    console.log('Building card container with sorted rooms:', sortedRooms);
     cardsContainer.innerHTML = '';
-
     if (!sortedRooms || sortedRooms.length === 0) {
         cardsContainer.innerHTML = `
             <div class="col-span-full text-center py-12 bg-slate-800/50 rounded-lg">
@@ -382,117 +384,6 @@ function getDueDateInfo(dueDate) {
     }
 
     return { show: true, text: `ครบกำหนดวันที่ ${dueDate.toLocaleDateString()}`, color: 'text-gray-400' };
-}
-
-function buildCardContainer(cardsContainer, sortedRooms) {
-    cardsContainer.innerHTML = '';
-    sortedRooms.map(roomData => {
-            if (!roomData || typeof roomData.room === 'undefined') return '';
-            
-            const totalAmount = Number(roomData.total || 0) + Number(roomData.waterTotal || 0);
-            const dueDateInfo = getDueDateInfo(roomData.dueDate);
-            const isPaymentConfirmed = roomData.paymentConfirmed === true;
-            const amountColorClass = getAmountColorClass(totalAmount);
-            
-            let formattedDate = 'N/A';
-            if (roomData.date) {
-                try {
-                    const dateParts = roomData.date.split('/');
-                    if (dateParts.length === 3) {
-                       const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
-                       if (!isNaN(date.getTime())) {
-                           formattedDate = date.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                       }
-                    }
-                } catch (e) { console.warn("Could not parse date:", roomData.date); }
-            }
-
-            let paymentStatusHtml = '';
-            if (isPaymentConfirmed) {
-                paymentStatusHtml = `<div class="payment-status confirmed"><i class="fas fa-check-circle"></i>ชำระเงินแล้ว</div>`;
-            } else if (dueDateInfo.show) {
-                let statusClass = 'due-soon';
-                let icon = 'fa-clock';
-                if (dueDateInfo.text.includes('เกินกำหนด')) {
-                    statusClass = 'overdue';
-                    icon = 'fa-exclamation-circle';
-                }
-                paymentStatusHtml = `<div class="payment-status ${statusClass}"><i class="fas ${icon}"></i>${dueDateInfo.text}</div>`;
-            }
-            getRoomName(roomData.room).then(roomname => {
-                const roomnameDisplay = roomname || 'ไม่มีชื่อ';
-                cardsContainer.innerHTML += `
-                    <div class="room-card" data-room-id="${roomData.room}">
-                    <div class="card-header">
-                        <div class="card-title-group">
-                            <div class="flex items-center gap-2">
-                            <span class="room-number">${roomData.room}</span>
-                            ${hasPermission('canEditAllBills') ? `<button onclick="openEditRoomNameModal('${roomData.room}', '${roomData.name || ''}')" class="text-yellow-400 hover:text-yellow-300 transition-colors" title="แก้ไขชื่อห้อง"><i class="fas fa-edit text-sm"></i></button>` : ''}
-                            </div>
-                            <p class="room-name truncate">${roomname || 'ไม่มีชื่อ'}</p>
-                        </div>
-                        <div class="card-meta text-right">
-                            <span class="meta-label">อัปเดตล่าสุด</span>
-                            <span class="meta-value">${formattedDate}</span>
-                        </div>
-                    </div>
-
-                    <div class="card-body">
-                        <div class="card-section">
-                            <span class="label">ค่าไฟ (หน่วย)</span>
-                            <span class="value electric">${roomData.units || 'N/A'}</span>
-                        </div>
-                        <div class="card-section">
-                            <span class="label">ค่าน้ำ (หน่วย)</span>
-                            <span class="value water">${roomData.waterUnits || '-'}</span>
-                        </div>
-                    </div>
-
-                    <div class="card-total">
-                        <span class="total-label">ยอดรวมล่าสุด</span>
-                        <p class="total-amount ${isPaymentConfirmed ? 'paid' : amountColorClass}">฿${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                    </div>
-
-                    ${paymentStatusHtml}
-
-                    <div class="card-footer">
-                        <button onclick="viewRoomHistory('${roomData.room}')" class="btn btn-primary"><i class="fas fa-history"></i>ประวัติ</button>
-                        ${hasPermission('canDeleteBills') ? `<button onclick="openDeleteRoomConfirmModal('${roomData.room}')" class="btn btn-danger" title="ลบห้อง"><i class="fas fa-trash"></i></button>` : ''}
-                    </div>
-                </div>
-
-                        `
-            })
-            // cardsContainer.innerHTML += `
-           
-
-            //     <div class="card-body">
-            //         <div class="card-section">
-            //             <span class="label">ค่าไฟ (หน่วย)</span>
-            //             <span class="value electric">${roomData.units || 'N/A'}</span>
-            //         </div>
-            //         <div class="card-section">
-            //             <span class="label">ค่าน้ำ (หน่วย)</span>
-            //             <span class="value water">${roomData.waterUnits || '-'}</span>
-            //         </div>
-            //     </div>
-
-            //     <div class="card-total">
-            //         <span class="total-label">ยอดรวมล่าสุด</span>
-            //         <p class="total-amount ${isPaymentConfirmed ? 'paid' : amountColorClass}">฿${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-            //     </div>
-
-            //     <div class="card-due-date-wrapper">
-            //         ${paymentStatusHtml}
-            //     </div>
-
-            //     <div class="card-footer">
-            //         <button onclick="viewRoomHistory('${roomData.room}')" class="btn btn-primary"><i class="fas fa-history"></i>ประวัติ</button>
-            //         ${hasPermission('canDeleteBills') ? `<button onclick="openDeleteRoomConfirmModal('${roomData.key}')" class="btn btn-danger" title="ลบห้อง"><i class="fas fa-trash"></i></button>` : ''}
-            //     </div>
-            // </div>
-            // `;
-        });
 }
 
 async function getRoomName(room) {
