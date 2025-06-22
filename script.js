@@ -3100,15 +3100,7 @@ async function populateBulkRoomsData() {
         modalBody.innerHTML = formHTML;
 
         // Initialize Flatpickr for the newly created date inputs
-        const commonOptions = {
-            dateFormat: "d/m/Y",
-            altInput: true,
-            altFormat: "j F Y",
-            locale: "th",
-            allowInput: true
-        };
-        flatpickr("#bulk-date", commonOptions);
-        flatpickr("#bulk-due-date", commonOptions);
+        initializeFlatpickr();
 
     } catch (error) {
         console.error('Error populating bulk rooms data:', error);
