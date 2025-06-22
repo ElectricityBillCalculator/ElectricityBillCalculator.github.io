@@ -16,13 +16,13 @@ const ROLE_PERMISSIONS = {
     'admin': {
         canManageUsers: true,
         canManageRoles: true,
-        canViewAllRooms: false, // Admin can only see rooms in their building
+        canViewAllRooms: true, // All rooms in their building
         canEditAllBills: true,
         canDeleteBills: true,
         canUploadEvidence: true,
         canViewReports: true,
         canAddNewBills: true,
-        canGenerateQRCode: true,
+        canGenerateInvoice: true,
         canViewHistory: true,
         canManageTenants: true, // Admin can manage tenants for their building
         canConfirmPayment: true, // Admin can confirm payments for their building
@@ -37,7 +37,7 @@ const ROLE_PERMISSIONS = {
         canUploadEvidence: false, // Or based on specific grants
         canViewReports: false,
         canAddNewBills: false,
-        canGenerateQRCode: true, // Can generate for their own bills if any
+        canGenerateInvoice: true, // Can generate for their own bills if any
         canViewHistory: true, // Can view their own history if any
         canManageTenants: false,
         canConfirmPayment: false, // General users cannot confirm payments
@@ -52,7 +52,7 @@ const ROLE_PERMISSIONS = {
         canUploadEvidence: true, // For their managed rooms
         canViewReports: false, // Or specific reports for their rooms
         canAddNewBills: true, // For their managed rooms
-        canGenerateQRCode: true, // For their managed rooms
+        canGenerateInvoice: true, // For their managed rooms
         canViewHistory: true, // For their managed rooms
         canManageTenants: true, // Key permission for Level 1 Owner
         canConfirmPayment: true, // Room owners can confirm payments for their managed rooms
@@ -67,7 +67,7 @@ const ROLE_PERMISSIONS = {
         canUploadEvidence: true, // For their accessible rooms
         canViewReports: false,
         canAddNewBills: false,
-        canGenerateQRCode: true, // For their accessible rooms' bills
+        canGenerateInvoice: true, // For their accessible rooms' bills
         canViewHistory: true, // For their accessible rooms
         canManageTenants: false,
         canConfirmPayment: false, // Tenants cannot confirm payments
@@ -82,7 +82,7 @@ const ROLE_PERMISSIONS = {
         canUploadEvidence: false,
         canViewReports: false,
         canAddNewBills: false,
-        canGenerateQRCode: true, // Potentially for specific cases
+        canGenerateInvoice: true, // Potentially for specific cases
         canViewHistory: true,  // Potentially for specific cases
         canManageTenants: false,
         canConfirmPayment: false, // Level 2 cannot confirm payments
@@ -185,7 +185,7 @@ function hasPermission(permission, roomToCheck = null) {
             const managedRooms = currentUserData.managedRooms || [];
             if (!managedRooms.includes(roomToCheck)) {
                 // If permission is to view history or QR, also check tenant accessible rooms
-                if (permission === 'canViewHistory' || permission === 'canGenerateQRCode') {
+                if (permission === 'canViewHistory' || permission === 'canGenerateInvoice') {
                     // This part is complex as it requires fetching all tenants and their rooms.
                     // For now, let's assume Level 1 can see history/QR of their own managed rooms.
                     // A more advanced check would iterate through their tenants' accessibleRooms.

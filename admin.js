@@ -585,10 +585,10 @@ async function handleReportGeneration(event) {
 
         if (bill) {
             // Found the bill, now generate the receipt using the global function
-            if (typeof generateQRCode === 'function') {
-                generateQRCode(bill);
+            if (typeof generateInvoice === 'function') {
+                generateInvoice(bill.key);
             } else {
-                console.error('generateQRCode function is not available.');
+                console.error('generateInvoice function is not available.');
                 errorEl.textContent = 'เกิดข้อผิดพลาด: ฟังก์ชันสร้างใบแจ้งหนี้ไม่พร้อมใช้งาน';
             }
         } else {

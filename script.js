@@ -251,7 +251,7 @@ function buildCardContainer(cardsContainer, sortedRooms) {
 
     sortedRooms.forEach(room => {
         try {
-            const { id, bill, status, tenantName } = room;
+            const { id, bill, status, tenantName, roomSize } = room;
 
             // --- Data validation and setting defaults ---
             const billExists = bill && bill.id;
@@ -280,10 +280,18 @@ function buildCardContainer(cardsContainer, sortedRooms) {
                 <div class="flex-grow flex flex-col">
                     <div class="flex-grow">
                         <h3 class="text-3xl font-bold text-white tracking-wider">${id}</h3>
-                        <p class="text-sm text-slate-400 mt-1 flex items-center min-h-[20px]">
-                            <i class="fas fa-user w-4 mr-2 text-slate-500"></i>
-                            <span>${currentTenantName}</span>
-                        </p>
+                        <div class="text-sm text-slate-400 mt-1 space-y-1 min-h-[3rem]">
+                            <p class="flex items-center min-h-[20px]">
+                                <i class="fas fa-user w-4 mr-2 text-slate-500"></i>
+                                <span>${currentTenantName}</span>
+                            </p>
+                            ${roomSize ? `
+                            <p class="flex items-center min-h-[20px]">
+                                <i class="fas fa-ruler-combined w-4 mr-2 text-slate-500"></i>
+                                <span>${roomSize}</span>
+                            </p>
+                            ` : ''}
+                        </div>
 
                         <div class="mt-4 text-center bg-slate-800/50 rounded-lg py-2">
                             <p class="text-xs text-slate-500">ยอดชำระล่าสุด</p>
@@ -305,8 +313,8 @@ function buildCardContainer(cardsContainer, sortedRooms) {
                      <button onclick="viewRoomHistory('${id}')" title="ประวัติและเพิ่มบิล" class="card-icon-button">
                         <i class="fas fa-history"></i>
                     </button>
-                    <button onclick='generatePromptPayQR(${JSON.stringify(bill || {}).replace(/"/g, "&quot;")}); return false;' title="สร้าง QR Code" class="card-icon-button" ${!billExists ? 'disabled' : ''}>
-                        <i class="fas fa-qrcode"></i>
+                    <button onclick="generateInvoiceForRoom('${id}')" title="ใบแจ้งหนี้" class="card-icon-button">
+                        <i class="fas fa-file-invoice-dollar"></i>
                     </button>
                     <button onclick="openAssessmentModal('${id}')" title="ใบประเมินอุปกรณ์" class="card-icon-button">
                         <i class="fas fa-clipboard-check"></i>
@@ -468,9 +476,9 @@ async function renderHistoryTable(room) {
 
             const actionsHtml = `
                 <div class="flex items-center justify-center gap-4">
-                    ${hasPermission('canGenerateQRCode', room) ? `
-                        <button onclick='generateQRCode(${billJson})' class="text-purple-400 hover:text-purple-300 transition-colors" title="สร้าง QR Code ชำระเงิน">
-                            <i class="fas fa-qrcode fa-lg"></i>
+                    ${hasPermission('canGenerateInvoice', room) ? `
+                        <button onclick="generateInvoice('${bill.key}')" class="text-green-400 hover:text-green-300 transition-colors" title="ใบแจ้งหนี้">
+                            <i class="fas fa-file-invoice-dollar fa-lg"></i>
                         </button>
                     ` : ''}
 
@@ -3978,6 +3986,30 @@ async function deleteRoom(roomId) {
     }
 }
 
+async function generateInvoiceForRoom(roomId) {
+    if (!roomId) {
+        showAlert('ไม่สามารถสร้างใบแจ้งหนี้ได้: ไม่พบข้อมูลห้อง', 'warning');
+        return;
+    }
+
+    try {
+        // Get the latest bill key for this room
+        const latestBillKey = await getLatestBillKeyForRoom(roomId);
+        
+        if (!latestBillKey) {
+            showAlert('ไม่พบข้อมูลบิลสำหรับห้องนี้', 'warning');
+            return;
+        }
+        
+        // Call the original generateInvoice function with the bill key
+        await generateInvoice(latestBillKey);
+        
+    } catch (error) {
+        console.error('Error generating invoice for room:', error);
+        showAlert('เกิดข้อผิดพลาดในการสร้างใบแจ้งหนี้: ' + error.message, 'error');
+    }
+}
+
 async function generateInvoice(billKey) {
     if (!billKey) {
         showAlert('ไม่สามารถสร้างใบแจ้งหนี้ได้: ไม่พบข้อมูลบิล', 'warning');
@@ -4100,6 +4132,39 @@ async function generateInvoice(billKey) {
     } catch (error) {
         console.error("Error generating invoice:", error);
         invoiceBody.innerHTML = `<p class="text-red-500 text-center p-8">${error.message}</p>`;
+    }
+}
+
+// Helper function to get the latest bill key for a room
+async function getLatestBillKeyForRoom(roomId) {
+    try {
+        const snapshot = await db.ref('electricityData')
+            .orderByChild('room')
+            .equalTo(roomId)
+            .once('value');
+        
+        const data = snapshot.val();
+        if (!data) return null;
+        
+        // Find the latest bill by date
+        let latestBillKey = null;
+        let latestDate = null;
+        
+        Object.keys(data).forEach(key => {
+            const bill = data[key];
+            if (bill.date) {
+                const billDate = new Date(bill.date.split('/').reverse().join('-'));
+                if (!latestDate || billDate > latestDate) {
+                    latestDate = billDate;
+                    latestBillKey = key;
+                }
+            }
+        });
+        
+        return latestBillKey;
+    } catch (error) {
+        console.error('Error getting latest bill key for room:', error);
+        return null;
     }
 }
 
