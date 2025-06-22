@@ -234,6 +234,7 @@ async function renderHomeRoomCards() {
                 <div class="card-footer flex justify-around items-center gap-2">
                     <button onclick="viewRoomHistory('${roomId}')" class="btn btn-primary" title="ดูประวัติ"><i class="fas fa-history"></i></button>
                     <button onclick="generateInvoice('${latestBill ? latestBill.key : ''}')" class="btn btn-success" title="ใบแจ้งหนี้" ${!latestBill ? 'disabled' : ''}><i class="fas fa-file-invoice-dollar"></i></button>
+                    <button onclick="openAssessmentModal('${roomId}', ${JSON.stringify(roomSettings).replace(/"/g, '&quot;')})" class="btn btn-accent" title="ใบประเมินอุปกรณ์"><i class="fas fa-clipboard-check"></i></button>
                     <button onclick="openRoomSettingsModal('${roomId}')" class="btn btn-secondary" title="ตั้งค่าห้อง"><i class="fas fa-cog"></i></button>
                 </div>
             </div>
@@ -3815,15 +3816,27 @@ function renderAssessmentSection(roomId, assessmentUrl) {
     let content = '';
     if (assessmentUrl) {
         content = `
-            <p class="text-slate-300 mb-2">ใบประเมินปัจจุบัน:</p>
-            <img src="${assessmentUrl}" class="rounded-lg max-w-xs h-auto shadow-md mb-2">
-            <button class="btn btn-secondary btn-sm" onclick="deleteAssessment('${roomId}')"><i class="fas fa-trash"></i> ลบรูปนี้</button>
+            <div class="space-y-3">
+                <p class="text-slate-300 mb-2">ใบประเมินปัจจุบัน:</p>
+                <img src="${assessmentUrl}" class="rounded-lg max-w-xs h-auto shadow-md mb-2">
+                <div class="flex gap-2">
+                    <button class="btn btn-secondary btn-sm" onclick="deleteAssessment('${roomId}')"><i class="fas fa-trash"></i> ลบรูปนี้</button>
+                    <button class="btn btn-accent btn-sm" onclick="openAssessmentModal('${roomId}', ${JSON.stringify({}).replace(/"/g, '&quot;')})"><i class="fas fa-clipboard-check"></i> สร้างใบประเมินใหม่</button>
+                </div>
+            </div>
         `;
     } else {
         content = `
-            <p class="text-slate-400 mb-2">ยังไม่มีใบประเมิน</p>
-            <input type="file" id="assessment-upload-input" class="form-input" accept="image/*">
-            <button class="btn btn-primary btn-sm mt-2" onclick="handleAssessmentUpload('${roomId}')"><i class="fas fa-upload"></i> อัปโหลด</button>
+            <div class="space-y-3">
+                <p class="text-slate-400 mb-2">ยังไม่มีใบประเมิน</p>
+                <div class="flex gap-2">
+                    <button class="btn btn-accent btn-sm" onclick="openAssessmentModal('${roomId}', ${JSON.stringify({}).replace(/"/g, '&quot;')})"><i class="fas fa-clipboard-check"></i> สร้างใบประเมินใหม่</button>
+                    <div class="flex-1">
+                        <input type="file" id="assessment-upload-input" class="form-input" accept="image/*">
+                        <button class="btn btn-primary btn-sm mt-2" onclick="handleAssessmentUpload('${roomId}')"><i class="fas fa-upload"></i> อัปโหลด</button>
+                    </div>
+                </div>
+            </div>
         `;
     }
     container.innerHTML = content;
@@ -4026,5 +4039,440 @@ async function generateInvoice(billKey) {
     } catch (error) {
         console.error("Error generating invoice:", error);
         invoiceBody.innerHTML = `<p class="text-red-500 text-center p-8">${error.message}</p>`;
+    }
+}
+
+// Function to open assessment modal
+function openAssessmentModal(roomId, roomData = {}) {
+    const modal = document.getElementById('assessment-modal');
+    const modalBody = document.getElementById('assessment-modal-body');
+    
+    if (!modal || !modalBody) {
+        console.error('Assessment modal elements not found');
+        return;
+    }
+    
+    // Populate modal content
+    modalBody.innerHTML = `
+        <div class="space-y-6">
+            <!-- Room Information -->
+            <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+                <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                    ข้อมูลห้อง
+                </h3>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-slate-400">เลขห้อง:</span>
+                        <span class="text-white font-medium">${roomId}</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">ผู้เช่า:</span>
+                        <span class="text-white font-medium">${roomData.tenantName || 'ไม่ระบุ'}</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">ขนาดห้อง:</span>
+                        <span class="text-white font-medium">${roomData.roomSize || 'ไม่ระบุ'}</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">วันที่ตรวจสอบ:</span>
+                        <span class="text-white font-medium">${new Date().toLocaleDateString('th-TH')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Equipment Assessment Form -->
+            <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+                <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-clipboard-check text-green-400"></i>
+                    ตรวจสอบอุปกรณ์ในห้อง
+                </h3>
+                
+                <div id="equipment-checklist" class="space-y-4">
+                    <!-- Equipment items will be generated here -->
+                </div>
+                
+                <button type="button" id="add-equipment-item" class="mt-4 w-full btn btn-secondary">
+                    <i class="fas fa-plus"></i> เพิ่มรายการอุปกรณ์
+                </button>
+            </div>
+
+            <!-- Notes Section -->
+            <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+                <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    <i class="fas fa-sticky-note text-yellow-400"></i>
+                    หมายเหตุเพิ่มเติม
+                </h3>
+                <textarea id="assessment-notes" 
+                          class="w-full h-24 bg-slate-800 border border-slate-600 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                          placeholder="บันทึกหมายเหตุเพิ่มเติมเกี่ยวกับสภาพอุปกรณ์..."></textarea>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+                <button type="button" id="download-assessment-btn" class="btn btn-success flex-1">
+                    <i class="fas fa-download"></i> ดาวน์โหลดแบบฟอร์ม
+                </button>
+                <button type="button" id="save-assessment-btn" class="btn btn-primary flex-1">
+                    <i class="fas fa-save"></i> บันทึกข้อมูล
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Generate default equipment checklist
+    generateEquipmentChecklist();
+    
+    // Add event listeners
+    setupAssessmentModalListeners(roomId, roomData);
+    
+    // Open modal
+    openModal('assessment-modal');
+}
+
+// Generate default equipment checklist
+function generateEquipmentChecklist() {
+    const container = document.getElementById('equipment-checklist');
+    if (!container) return;
+    
+    const defaultEquipment = [
+        { name: 'แอร์คอนดิชัน', category: 'เครื่องปรับอากาศ' },
+        { name: 'พัดลม', category: 'เครื่องปรับอากาศ' },
+        { name: 'ตู้เย็น', category: 'เครื่องใช้ไฟฟ้า' },
+        { name: 'ทีวี', category: 'เครื่องใช้ไฟฟ้า' },
+        { name: 'เครื่องซักผ้า', category: 'เครื่องใช้ไฟฟ้า' },
+        { name: 'เตาไฟฟ้า', category: 'เครื่องใช้ไฟฟ้า' },
+        { name: 'ไมโครเวฟ', category: 'เครื่องใช้ไฟฟ้า' },
+        { name: 'ตู้เสื้อผ้า', category: 'เฟอร์นิเจอร์' },
+        { name: 'เตียง', category: 'เฟอร์นิเจอร์' },
+        { name: 'โต๊ะทำงาน', category: 'เฟอร์นิเจอร์' },
+        { name: 'เก้าอี้', category: 'เฟอร์นิเจอร์' },
+        { name: 'โคมไฟ', category: 'แสงสว่าง' },
+        { name: 'พรม', category: 'ตกแต่ง' },
+        { name: 'ผ้าม่าน', category: 'ตกแต่ง' },
+        { name: 'กุญแจ', category: 'ความปลอดภัย' },
+        { name: 'ประตู', category: 'โครงสร้าง' },
+        { name: 'หน้าต่าง', category: 'โครงสร้าง' },
+        { name: 'พื้น', category: 'โครงสร้าง' },
+        { name: 'ผนัง', category: 'โครงสร้าง' },
+        { name: 'ห้องน้ำ', category: 'สุขภัณฑ์' },
+        { name: 'อ่างล้างหน้า', category: 'สุขภัณฑ์' },
+        { name: 'ฝักบัว', category: 'สุขภัณฑ์' },
+        { name: 'ชักโครก', category: 'สุขภัณฑ์' }
+    ];
+    
+    container.innerHTML = defaultEquipment.map((item, index) => `
+        <div class="equipment-item bg-slate-800 rounded-lg p-4 border border-slate-600" data-index="${index}">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs bg-slate-600 text-slate-300 px-2 py-1 rounded-full">${item.category}</span>
+                    <h4 class="font-medium text-white">${item.name}</h4>
+                </div>
+                <button type="button" class="text-red-400 hover:text-red-300" onclick="removeEquipmentItem(${index})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">สภาพ</label>
+                    <select class="equipment-condition w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500">
+                        <option value="excellent">ดีเยี่ยม</option>
+                        <option value="good" selected>ดี</option>
+                        <option value="fair">ปานกลาง</option>
+                        <option value="poor">แย่</option>
+                        <option value="damaged">เสียหาย</option>
+                        <option value="missing">หายไป</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">จำนวน</label>
+                    <input type="number" class="equipment-quantity w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500" value="1" min="0">
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">หมายเหตุ</label>
+                    <input type="text" class="equipment-notes w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500" placeholder="หมายเหตุเพิ่มเติม">
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Remove equipment item
+function removeEquipmentItem(index) {
+    const item = document.querySelector(`[data-index="${index}"]`);
+    if (item) {
+        item.remove();
+    }
+}
+
+// Setup assessment modal event listeners
+function setupAssessmentModalListeners(roomId, roomData) {
+    // Add equipment item button
+    const addBtn = document.getElementById('add-equipment-item');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            const container = document.getElementById('equipment-checklist');
+            const newIndex = container.children.length;
+            
+            const newItem = document.createElement('div');
+            newItem.className = 'equipment-item bg-slate-800 rounded-lg p-4 border border-slate-600 animate-on-load';
+            newItem.setAttribute('data-index', newIndex);
+            newItem.innerHTML = `
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <input type="text" class="equipment-category bg-slate-600 text-slate-300 px-2 py-1 rounded-full text-xs w-20" placeholder="หมวดหมู่">
+                        <input type="text" class="equipment-name font-medium text-white bg-transparent border-b border-slate-600 focus:border-blue-500 outline-none" placeholder="ชื่ออุปกรณ์">
+                    </div>
+                    <button type="button" class="text-red-400 hover:text-red-300" onclick="removeEquipmentItem(${newIndex})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">สภาพ</label>
+                        <select class="equipment-condition w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="excellent">ดีเยี่ยม</option>
+                            <option value="good" selected>ดี</option>
+                            <option value="fair">ปานกลาง</option>
+                            <option value="poor">แย่</option>
+                            <option value="damaged">เสียหาย</option>
+                            <option value="missing">หายไป</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">จำนวน</label>
+                        <input type="number" class="equipment-quantity w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500" value="1" min="0">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">หมายเหตุ</label>
+                        <input type="text" class="equipment-notes w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500" placeholder="หมายเหตุเพิ่มเติม">
+                    </div>
+                </div>
+            `;
+            container.appendChild(newItem);
+        });
+    }
+    
+    // Download assessment button
+    const downloadBtn = document.getElementById('download-assessment-btn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+            downloadAssessmentForm(roomId, roomData);
+        });
+    }
+    
+    // Save assessment button
+    const saveBtn = document.getElementById('save-assessment-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            saveAssessmentData(roomId, roomData);
+        });
+    }
+    
+    // Close modal button
+    const closeBtn = document.getElementById('close-assessment-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            closeModal('assessment-modal');
+        });
+    }
+}
+
+// Download assessment form as PDF/Image
+function downloadAssessmentForm(roomId, roomData) {
+    // Create a printable version of the assessment form
+    const assessmentData = collectAssessmentData();
+    
+    // Create HTML content for the form
+    const formHTML = generateAssessmentFormHTML(roomId, roomData, assessmentData);
+    
+    // Create a temporary container
+    const tempContainer = document.createElement('div');
+    tempContainer.innerHTML = formHTML;
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '0';
+    tempContainer.style.width = '800px';
+    tempContainer.style.backgroundColor = 'white';
+    tempContainer.style.color = 'black';
+    tempContainer.style.padding = '20px';
+    tempContainer.style.fontFamily = 'Arial, sans-serif';
+    
+    document.body.appendChild(tempContainer);
+    
+    // Use html2canvas to convert to image
+    html2canvas(tempContainer, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        width: 800,
+        height: tempContainer.scrollHeight
+    }).then(canvas => {
+        // Create download link
+        const link = document.createElement('a');
+        link.download = `ใบประเมินอุปกรณ์_ห้อง${roomId}_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+        
+        // Clean up
+        document.body.removeChild(tempContainer);
+        
+        showAlert('ดาวน์โหลดแบบฟอร์มสำเร็จ', 'success');
+    }).catch(error => {
+        console.error('Error generating assessment form:', error);
+        showAlert('เกิดข้อผิดพลาดในการดาวน์โหลด', 'error');
+        document.body.removeChild(tempContainer);
+    });
+}
+
+// Collect assessment data from form
+function collectAssessmentData() {
+    const equipmentItems = [];
+    const equipmentElements = document.querySelectorAll('.equipment-item');
+    
+    equipmentElements.forEach((element, index) => {
+        const nameInput = element.querySelector('.equipment-name');
+        const categoryInput = element.querySelector('.equipment-category');
+        const conditionSelect = element.querySelector('.equipment-condition');
+        const quantityInput = element.querySelector('.equipment-quantity');
+        const notesInput = element.querySelector('.equipment-notes');
+        
+        equipmentItems.push({
+            name: nameInput ? nameInput.value || nameInput.placeholder : `อุปกรณ์ ${index + 1}`,
+            category: categoryInput ? categoryInput.value || categoryInput.placeholder : 'ไม่ระบุ',
+            condition: conditionSelect ? conditionSelect.value : 'good',
+            quantity: quantityInput ? parseInt(quantityInput.value) || 1 : 1,
+            notes: notesInput ? notesInput.value : ''
+        });
+    });
+    
+    const notes = document.getElementById('assessment-notes') ? document.getElementById('assessment-notes').value : '';
+    
+    return {
+        equipment: equipmentItems,
+        notes: notes,
+        assessmentDate: new Date().toISOString()
+    };
+}
+
+// Generate HTML for assessment form
+function generateAssessmentFormHTML(roomId, roomData, assessmentData) {
+    const conditionLabels = {
+        'excellent': 'ดีเยี่ยม',
+        'good': 'ดี',
+        'fair': 'ปานกลาง',
+        'poor': 'แย่',
+        'damaged': 'เสียหาย',
+        'missing': 'หายไป'
+    };
+    
+    return `
+        <div style="font-family: 'Sarabun', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+            <!-- Header -->
+            <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
+                <h1 style="font-size: 24px; font-weight: bold; margin: 0; color: #333;">ใบประเมินอุปกรณ์ในห้องพัก</h1>
+                <p style="font-size: 16px; margin: 10px 0 0 0; color: #666;">Equipment Assessment Form</p>
+            </div>
+            
+            <!-- Room Information -->
+            <div style="margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+                <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 15px 0; color: #333;">ข้อมูลห้อง</h2>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; width: 150px; font-weight: bold; color: #555;">เลขห้อง:</td>
+                        <td style="padding: 8px 0; color: #333;">${roomId}</td>
+                        <td style="padding: 8px 0; width: 150px; font-weight: bold; color: #555;">ผู้เช่า:</td>
+                        <td style="padding: 8px 0; color: #333;">${roomData.tenantName || 'ไม่ระบุ'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold; color: #555;">ขนาดห้อง:</td>
+                        <td style="padding: 8px 0; color: #333;">${roomData.roomSize || 'ไม่ระบุ'}</td>
+                        <td style="padding: 8px 0; font-weight: bold; color: #555;">วันที่ตรวจสอบ:</td>
+                        <td style="padding: 8px 0; color: #333;">${new Date().toLocaleDateString('th-TH')}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Equipment Checklist -->
+            <div style="margin-bottom: 30px;">
+                <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 15px 0; color: #333;">รายการตรวจสอบอุปกรณ์</h2>
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+                    <thead>
+                        <tr style="background-color: #f5f5f5;">
+                            <th style="border: 1px solid #ddd; padding: 12px; text-align: left; font-weight: bold; color: #333;">ลำดับ</th>
+                            <th style="border: 1px solid #ddd; padding: 12px; text-align: left; font-weight: bold; color: #333;">หมวดหมู่</th>
+                            <th style="border: 1px solid #ddd; padding: 12px; text-align: left; font-weight: bold; color: #333;">ชื่ออุปกรณ์</th>
+                            <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; color: #333;">จำนวน</th>
+                            <th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; color: #333;">สภาพ</th>
+                            <th style="border: 1px solid #ddd; padding: 12px; text-align: left; font-weight: bold; color: #333;">หมายเหตุ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${assessmentData.equipment.map((item, index) => `
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #333;">${index + 1}</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; color: #333;">${item.category}</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; color: #333;">${item.name}</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #333;">${item.quantity}</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #333;">${conditionLabels[item.condition] || item.condition}</td>
+                                <td style="border: 1px solid #ddd; padding: 12px; color: #333;">${item.notes}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Notes Section -->
+            ${assessmentData.notes ? `
+                <div style="margin-bottom: 30px;">
+                    <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 15px 0; color: #333;">หมายเหตุเพิ่มเติม</h2>
+                    <div style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; color: #333;">
+                        ${assessmentData.notes.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            <!-- Signature Section -->
+            <div style="margin-top: 50px; display: flex; justify-content: space-between;">
+                <div style="text-align: center; width: 45%;">
+                    <div style="border-top: 1px solid #333; padding-top: 10px; margin-bottom: 10px;"></div>
+                    <p style="margin: 0; font-weight: bold; color: #333;">ผู้ตรวจสอบ</p>
+                    <p style="margin: 5px 0 0 0; color: #666;">(Inspector)</p>
+                </div>
+                <div style="text-align: center; width: 45%;">
+                    <div style="border-top: 1px solid #333; padding-top: 10px; margin-bottom: 10px;"></div>
+                    <p style="margin: 0; font-weight: bold; color: #333;">ผู้เช่า</p>
+                    <p style="margin: 5px 0 0 0; color: #666;">(Tenant)</p>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 15px;">
+                <p style="margin: 0;">เอกสารนี้ถูกสร้างโดยระบบจัดการห้องพัก - ${new Date().toLocaleDateString('th-TH')}</p>
+            </div>
+        </div>
+    `;
+}
+
+// Save assessment data to database
+async function saveAssessmentData(roomId, roomData) {
+    try {
+        const assessmentData = collectAssessmentData();
+        
+        // Save to database
+        const assessmentRef = db.ref(`assessments/${roomId}`);
+        await assessmentRef.set({
+            ...assessmentData,
+            roomId: roomId,
+            roomData: roomData,
+            createdBy: auth.currentUser?.uid || 'unknown',
+            createdAt: new Date().toISOString()
+        });
+        
+        showAlert('บันทึกข้อมูลการประเมินสำเร็จ', 'success');
+        closeModal('assessment-modal');
+        
+    } catch (error) {
+        console.error('Error saving assessment data:', error);
+        showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
     }
 }

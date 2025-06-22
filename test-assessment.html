@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบฟีเจอร์ใบประเมินอุปกรณ์</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-900 min-h-screen text-slate-300">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-white mb-8 text-center">
+            <i class="fas fa-clipboard-check text-purple-400 mr-3"></i>
+            ทดสอบฟีเจอร์ใบประเมินอุปกรณ์
+        </h1>
+        
+        <div class="max-w-4xl mx-auto space-y-6">
+            <!-- Test Room Card -->
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+                <h2 class="text-xl font-semibold text-white mb-4">ห้องทดสอบ</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <span class="text-slate-400">เลขห้อง:</span>
+                        <span class="text-white font-medium ml-2">101</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">ผู้เช่า:</span>
+                        <span class="text-white font-medium ml-2">สมชาย ใจดี</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">ขนาดห้อง:</span>
+                        <span class="text-white font-medium ml-2">30 ตร.ม.</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">ค่าเช่า:</span>
+                        <span class="text-white font-medium ml-2">5,000 บาท</span>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="testOpenAssessmentModal()" class="btn btn-accent">
+                        <i class="fas fa-clipboard-check"></i> เปิด Modal ใบประเมิน
+                    </button>
+                    <button onclick="testDownloadForm()" class="btn btn-success">
+                        <i class="fas fa-download"></i> ทดสอบดาวน์โหลด
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Test Results -->
+            <div id="test-results" class="bg-slate-800 rounded-xl p-6 border border-slate-700 hidden">
+                <h3 class="text-lg font-semibold text-white mb-4">ผลการทดสอบ</h3>
+                <div id="test-output" class="text-slate-300"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessment Modal -->
+    <div id="assessment-modal" class="modal-backdrop">
+        <div class="modal-content max-w-lg">
+            <div class="modal-header">
+                <h2 class="modal-title text-purple-400"><i class="fas fa-file-signature mr-3"></i>จัดการใบประเมินอุปกรณ์</h2>
+                <button id="close-assessment-modal" class="modal-close-btn">&times;</button>
+            </div>
+            <div id="assessment-modal-body" class="modal-body">
+                <!-- Content will be injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test data
+        const testRoomData = {
+            roomId: '101',
+            tenantName: 'สมชาย ใจดี',
+            roomSize: '30 ตร.ม.',
+            rent: 5000
+        };
+
+        // Test functions
+        function testOpenAssessmentModal() {
+            console.log('Testing openAssessmentModal...');
+            if (typeof openAssessmentModal === 'function') {
+                openAssessmentModal(testRoomData.roomId, testRoomData);
+                showTestResult('✅ Modal เปิดสำเร็จ');
+            } else {
+                showTestResult('❌ ฟังก์ชัน openAssessmentModal ไม่พบ');
+            }
+        }
+
+        function testDownloadForm() {
+            console.log('Testing download form generation...');
+            if (typeof generateAssessmentFormHTML === 'function') {
+                const testAssessmentData = {
+                    equipment: [
+                        {
+                            name: 'แอร์คอนดิชัน',
+                            category: 'เครื่องปรับอากาศ',
+                            condition: 'good',
+                            quantity: 1,
+                            notes: 'ทำงานปกติ'
+                        },
+                        {
+                            name: 'ตู้เย็น',
+                            category: 'เครื่องใช้ไฟฟ้า',
+                            condition: 'excellent',
+                            quantity: 1,
+                            notes: 'ใหม่'
+                        }
+                    ],
+                    notes: 'ห้องอยู่ในสภาพดี',
+                    assessmentDate: new Date().toISOString()
+                };
+
+                const html = generateAssessmentFormHTML(testRoomData.roomId, testRoomData, testAssessmentData);
+                console.log('Generated HTML:', html);
+                showTestResult('✅ สร้าง HTML สำเร็จ - ดู Console สำหรับรายละเอียด');
+            } else {
+                showTestResult('❌ ฟังก์ชัน generateAssessmentFormHTML ไม่พบ');
+            }
+        }
+
+        function showTestResult(message) {
+            const resultsDiv = document.getElementById('test-results');
+            const outputDiv = document.getElementById('test-output');
+            
+            resultsDiv.classList.remove('hidden');
+            outputDiv.innerHTML += `<p class="mb-2">${message}</p>`;
+        }
+
+        // Modal functions (simplified for testing)
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('active');
+                document.body.classList.add('modal-open');
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.classList.remove('modal-open');
+            }
+        }
+
+        // Setup modal close button
+        document.addEventListener('DOMContentLoaded', function() {
+            const closeBtn = document.getElementById('close-assessment-modal');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    closeModal('assessment-modal');
+                });
+            }
+        });
+    </script>
+</body>
+</html> 

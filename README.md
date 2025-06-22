@@ -27,6 +27,14 @@ The Electricity Bill Calculator is a full-featured web application designed for 
 - **Statistics Dashboard**: Real-time system statistics
 - **Role Assignment**: Flexible permission management
 - **Audit Trail**: Track user activities and changes
+- **Equipment Assessment**: Create and download equipment inspection forms
+
+### 📋 Room Management
+- **Room Settings**: Configure room details, rent, and add-ons
+- **Tenant Management**: Manage tenant access and permissions
+- **Equipment Assessment**: Comprehensive equipment inspection forms
+- **Bulk Data Entry**: Add electricity/water data for multiple rooms
+- **Assessment History**: Track equipment condition over time
 
 ### 📱 Modern User Experience
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
@@ -152,6 +160,7 @@ npx live-server .
 - **[Project Documentation](docs/PROJECT_DOCUMENTATION.md)**: Complete technical overview
 - **[API Documentation](docs/API_DOCUMENTATION.md)**: Function reference and code structure
 - **[Deployment Guide](docs/DEPLOYMENT_GUIDE.md)**: Step-by-step deployment instructions
+- **[Equipment Assessment Feature](docs/EQUIPMENT_ASSESSMENT_FEATURE.md)**: Equipment inspection form system
 
 ### For Users
 - **[User Manual](docs/USER_MANUAL.md)**: Complete user guide with screenshots
@@ -185,6 +194,7 @@ npx live-server .
 | View Reports | ✅ | ✅ | ❌ | ❌ |
 | Manage Users | ✅ | ❌ | ❌ | ❌ |
 | Manage Roles | ✅ | ❌ | ❌ | ❌ |
+| Equipment Assessment | ✅ | ✅ | ✅ | ❌ |
 
 ## 🌐 Browser Support
 
