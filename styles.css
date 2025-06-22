@@ -150,6 +150,11 @@ body.modal-open {
     flex-shrink: 0;
 }
 
+.modal-footer button:disabled {
+    background-color: #4b5563;
+    cursor: not-allowed;
+}
+
 /* Responsive modal adjustments */
 @media (max-width: 768px) {
     .modal-backdrop {
@@ -261,50 +266,11 @@ body.modal-open {
 
 /* === Room Card Styles === */
 .room-card {
-    background: linear-gradient(145deg, #1e293b, #151d2c); /* slate-800 to darker */
-    border: 1px solid #334155; /* slate-700 */
-    border-radius: 1.5rem; /* 2xl */
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
-    padding: 1.5rem; /* p-6 */
-    display: flex;
-    flex-direction: column;
-    transition: all 0.3s ease;
-    overflow: hidden;
-    position: relative;
-}
-.room-card:before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent 30%);
-    transform: rotate(0deg);
-    transition: transform 1s ease, opacity 0.5s ease;
-    opacity: 0;
-    pointer-events: none;
+    /* Styles for the card itself, ensure it's visible by default */
 }
 
-.room-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 25px 50px -12px rgba(59, 130, 246, 0.2);
-    border-color: #3B82F6; /* blue-500 */
-}
-.room-card:hover:before {
-    opacity: 1;
-    transform: rotate(360deg);
-}
-
-.room-card.card-enter {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
-}
-
-.room-card.card-enter-active {
-    opacity: 1;
-    transform: translateY(0);
+.room-card-wrapper {
+    perspective: 1000px;
 }
 
 .room-card .card-content {
@@ -493,4 +459,40 @@ body.modal-open {
 .room-name .edit-name-btn:hover {
     color: var(--slate-300);
     background-color: var(--slate-700);
+}
+
+/* New Card Icon Button Styles */
+.card-icon-button {
+    background-color: rgba(51, 65, 85, 0.7); /* bg-slate-700/70 */
+    color: #d1d5db; /* text-slate-300 */
+    border-radius: 0.5rem; /* rounded-lg */
+    padding: 0.6rem; /* p-2.5 */
+    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
+}
+.card-icon-button:hover {
+    background-color: #475569; /* bg-slate-600 */
+    color: #ffffff; /* text-white */
+    transform: scale(1.05);
+    border-color: rgba(71, 85, 105, 1); /* border-slate-500 */
+}
+.card-icon-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background-color: rgba(30, 41, 59, 0.5);
+    transform: none;
+}
+.card-icon-button i {
+    font-size: 1rem; /* text-base */
+    line-height: 1.5rem;
+}
+
+/* Staggered Animation for Cards */
+.room-card {
+    /* opacity: 0; */ /* This was causing the cards to be invisible */
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.room-card-wrapper {
+    perspective: 1000px;
 } 

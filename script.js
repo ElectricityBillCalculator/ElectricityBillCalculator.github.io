@@ -128,168 +128,203 @@ function getAmountColorClass(amount) {
     return 'high';
 }
 
+function updateRoomStatusSummary(total, occupied, vacant) {
+    const summaryContainer = document.getElementById('room-status-summary');
+    if (!summaryContainer) return;
+
+    summaryContainer.innerHTML = `
+        <span class="flex items-center gap-2" title="ห้องทั้งหมด">
+            <i class="fas fa-th-large text-slate-400"></i>
+            <strong>ทั้งหมด:</strong> ${total}
+        </span>
+        <span class="flex items-center gap-2" title="ห้องที่มีคนอยู่">
+            <i class="fas fa-user-check text-green-400"></i>
+            <strong>มีคนอยู่:</strong> ${occupied}
+        </span>
+        <span class="flex items-center gap-2" title="ห้องว่าง">
+            <i class="fas fa-person-booth text-yellow-400"></i>
+            <strong>ว่าง:</strong> ${vacant}
+        </span>
+    `;
+}
+
+function sortRooms(rooms) {
+    if (!Array.isArray(rooms)) return [];
+    return rooms.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+}
+
 async function renderHomeRoomCards() {
     const cardsContainer = document.getElementById('home-room-cards');
-    if (!cardsContainer) return;
-
-    cardsContainer.innerHTML = `<p class="text-center text-gray-400 col-span-full py-8">กำลังโหลดข้อมูลห้องพัก...</p>`;
+    if (!cardsContainer) {
+        return;
+    }
+    cardsContainer.innerHTML = '<p class="text-center text-gray-400 col-span-full py-8">กำลังโหลดข้อมูลห้องพัก (เริ่มต้น)...</p>';
 
     try {
-        console.log("--- เริ่มกระบวนการแสดงผลการ์ด ---");
-        // 1. Fetch all room settings first
-        const roomsSnapshot = await db.ref('rooms').once('value');
-        const roomsData = roomsSnapshot.val() || {};
-        console.log("1. ข้อมูลห้องพักทั้งหมด (Rooms):", JSON.parse(JSON.stringify(roomsData)));
+        const roomsSnapshot = await db.ref('rooms').once('value'); 
+        const allRoomsSettings = roomsSnapshot.val() || {};
 
+        const allBills = await loadFromFirebase(); 
 
-        // 2. Fetch all bills
-        const billsSnapshot = await db.ref('electricityData').once('value');
-        const billsData = billsSnapshot.val() || {};
-        console.log("2. ข้อมูลบิลทั้งหมด (Bills):", JSON.parse(JSON.stringify(billsData)));
+        const allRoomIdsFromBills = allBills.map(b => b.room);
+        const allRoomIdsFromRooms = Object.keys(allRoomsSettings);
+        const allRoomIds = [...new Set([...allRoomIdsFromBills, ...allRoomIdsFromRooms])].filter(Boolean);
 
-        // --- Create a master list of all room IDs from both sources ---
-        const roomIdsFromRooms = Object.keys(roomsData);
-        const roomIdsFromBills = Object.values(billsData).map(bill => bill.room);
-        const allRoomIds = [...new Set([...roomIdsFromRooms, ...roomIdsFromBills])].filter(id => id); // Create a unique list and remove any falsy values
-        console.log("2A. ID ห้องทั้งหมดจากทุกแหล่ง (Master List):", allRoomIds);
-
-
-        // Create a map of latest bills for each room
-        const latestBills = {};
-        for (const key in billsData) {
-            const bill = { key, ...billsData[key] };
-
-            // --- DEBUG LOG & SAFETY CHECK ---
-            // ตรวจสอบว่าบิลมีข้อมูลวันที่ที่ถูกต้องหรือไม่
-            if (!bill || !bill.date || typeof bill.date !== 'string' || bill.date.split('/').length !== 3) {
-                console.warn(`[LOG] ข้ามบิลเนื่องจากข้อมูลวันที่ไม่ถูกต้อง:`, bill);
-                continue; // ข้ามบิลนี้ไป
-            }
-            
-            const existingBill = latestBills[bill.room];
-
-            // เปรียบเทียบวันที่เพื่อหาบิลล่าสุด
-            if (!existingBill || new Date(bill.date.split('/').reverse().join('-')) > new Date(existingBill.date.split('/').reverse().join('-'))) {
-                latestBills[bill.room] = bill;
-            }
-        }
-        console.log("3. ข้อมูลบิลล่าสุดของแต่ละห้อง (Latest Bills Map):", JSON.parse(JSON.stringify(latestBills)));
-        
-        // Filter rooms based on user permissions
-        const user = window.currentUser;
         const userRole = window.currentUserRole;
         const userData = window.currentUserData;
-        let displayableRoomIds = allRoomIds; // Start with the master list of all rooms
+        
+        let displayableRoomIds = allRoomIds; 
 
         if (userRole === 'admin') {
             if (userData && userData.buildingCode) {
-                // New, building-specific admin: filter by buildingCode
                 displayableRoomIds = allRoomIds.filter(roomId => {
-                    const bill = latestBills[roomId];
-                    // A room belongs to the admin's building if its bill has the matching buildingCode.
-                    return bill && bill.buildingCode === userData.buildingCode;
+                    const roomInfo = allRoomsSettings[roomId];
+                    return roomInfo && roomInfo.buildingCode === userData.buildingCode;
                 });
-                console.log(`Admin (Building: ${userData.buildingCode}) sees ${displayableRoomIds.length} rooms.`);
-            } else {
-                // Legacy super-admin: can see all rooms.
-                // No filtering needed, `displayableRoomIds` is already `allRoomIds`.
-                console.log('Legacy admin: sees all rooms.');
             }
         } else if (userRole === '1' && userData && userData.managedRooms) {
-            displayableRoomIds = displayableRoomIds.filter(roomId => userData.managedRooms.includes(roomId));
+            displayableRoomIds = allRoomIds.filter(roomId => userData.managedRooms.includes(roomId));
         } else if (userRole === 'level1_tenant' && userData && userData.accessibleRooms) {
-            displayableRoomIds = displayableRoomIds.filter(roomId => userData.accessibleRooms.includes(roomId));
+            displayableRoomIds = allRoomIds.filter(roomId => userData.accessibleRooms.includes(roomId));
         }
 
-        console.log("4. ID ห้องทั้งหมดที่จะแสดงผล:", displayableRoomIds);
-
         if (displayableRoomIds.length === 0) {
-            cardsContainer.innerHTML = '<p class="text-center text-gray-400 col-span-full">ไม่พบข้อมูลห้องพักที่คุณมีสิทธิ์เข้าถึง</p>';
+            cardsContainer.innerHTML = '<p class="text-center text-gray-400 col-span-full py-8">ไม่พบข้อมูลห้องพักที่คุณมีสิทธิ์เข้าถึง</p>';
+            updateRoomStatusSummary(0, 0, 0);
             return;
         }
 
-        const sortedRoomIds = displayableRoomIds.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-
-        cardsContainer.innerHTML = sortedRoomIds.map(roomId => {
-            const roomSettings = roomsData[roomId] || {};
-            const latestBill = latestBills[roomId] || null; // Use null for clarity
-            
-            console.log(`[LOG] กำลังสร้างการ์ดสำหรับห้อง ${roomId}:`, { roomSettings, latestBill });
-
-            const addonsTotal = (roomSettings.addons || []).reduce((acc, addon) => acc + Number(addon.price || 0), 0);
-            const rent = Number(roomSettings.rent || 0);
-            const electricTotal = latestBill ? Number(latestBill.total || 0) : 0;
-            const waterTotal = latestBill ? Number(latestBill.waterTotal || 0) : 0;
-            const totalAmount = rent + electricTotal + waterTotal + addonsTotal;
-
-            const isPaymentConfirmed = latestBill ? latestBill.paymentConfirmed === true : false;
-            const dueDateInfo = getDueDateInfo(latestBill ? latestBill.dueDate : null);
-            const amountColorClass = getAmountColorClass(totalAmount);
-            
-            // --- SAFETY CHECK ---
-            const formattedDate = (latestBill && latestBill.date) ? new Date(latestBill.date.split('/').reverse().join('-')).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'ยังไม่มีบิล';
-
-            let paymentStatusHtml = '';
-            if (isPaymentConfirmed) {
-                paymentStatusHtml = `<div class="payment-status confirmed"><i class="fas fa-check-circle"></i>ชำระเงินแล้ว</div>`;
-            } else if (dueDateInfo.show) {
-                let statusClass = 'due-soon';
-                let icon = 'fa-clock';
-                if (dueDateInfo.text.includes('เกินกำหนด')) {
-                    statusClass = 'overdue';
-                    icon = 'fa-exclamation-circle';
+        const latestBillsMap = allBills.reduce((acc, bill) => {
+            if (displayableRoomIds.includes(bill.room)) { 
+                if (!acc[bill.room] || new Date(bill.date.split('/').reverse().join('-')) > new Date(acc[bill.room].date.split('/').reverse().join('-'))) {
+                    acc[bill.room] = bill;
                 }
-                paymentStatusHtml = `<div class="payment-status ${statusClass}"><i class="fas ${icon}"></i>${dueDateInfo.text}</div>`;
             }
+            return acc;
+        }, {});
 
-            // Fallback for tenant name if not set in room settings
-            const tenantName = roomSettings.tenantName || (latestBill ? latestBill.name : 'ยังไม่มีผู้เช่า');
-
-            return `
-            <div class="room-card" data-room-id="${roomId}">
-                <div class="card-content">
-                    <div class="room-number">${roomId}</div>
-                    <div class="room-name truncate">
-                        <span>${tenantName}</span>
-                        <button class="edit-name-btn" onclick="promptForTenantName('${roomId}', '${tenantName}')" title="แก้ไขชื่อผู้เช่า">
-                            <i class="fas fa-pencil-alt fa-xs"></i>
-                        </button>
-                    </div>
-                    <div class="card-details">
-                        ${roomSettings.roomSize ? `<span><i class="fas fa-ruler-combined fa-xs"></i> ${roomSettings.roomSize}</span>` : ''}
-                    </div>
-                    <div class="total-amount ${isPaymentConfirmed ? 'paid' : amountColorClass}">
-                        ฿${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                    </div>
-                    <div class="payment-status-wrapper">
-                        ${paymentStatusHtml}
-                    </div>
-                </div>
-                <div class="card-footer flex justify-around items-center gap-2">
-                    <button onclick="viewRoomHistory('${roomId}')" class="btn btn-primary" title="ดูประวัติ"><i class="fas fa-history"></i></button>
-                    <button onclick="generateInvoice('${latestBill ? latestBill.key : ''}')" class="btn btn-success" title="ใบแจ้งหนี้" ${!latestBill ? 'disabled' : ''}><i class="fas fa-file-invoice-dollar"></i></button>
-                    <button onclick="openAssessmentModal('${roomId}', ${JSON.stringify(roomSettings).replace(/"/g, '&quot;')})" class="btn btn-accent" title="ใบประเมินอุปกรณ์"><i class="fas fa-clipboard-check"></i></button>
-                    <button onclick="openRoomSettingsModal('${roomId}')" class="btn btn-secondary" title="ตั้งค่าห้อง"><i class="fas fa-cog"></i></button>
-                </div>
-            </div>
-            `;
-        }).join('');
-
-        // Staggered animation for cards
-        const cards = cardsContainer.querySelectorAll('.room-card');
-        cards.forEach((card, index) => {
-            card.style.setProperty('--animation-delay', `${index * 50}ms`);
-            card.classList.add('card-enter');
-            setTimeout(() => {
-                card.classList.add('card-enter-active');
-            }, 100 * index);
+        window.allRoomsData = displayableRoomIds.map(roomId => {
+            return {
+                id: roomId,
+                bill: latestBillsMap[roomId] || { room: roomId },
+                ...(allRoomsSettings[roomId] || { status: 'vacant' })
+            };
         });
-        console.log("--- สิ้นสุดกระบวนการแสดงผลการ์ด ---");
+
+        let occupiedCount = 0;
+        let vacantCount = 0;
+        window.allRoomsData.forEach(room => {
+            if (room.status === 'occupied') {
+                occupiedCount++;
+            } else {
+                vacantCount++;
+            }
+        });
+        updateRoomStatusSummary(displayableRoomIds.length, occupiedCount, vacantCount);
+
+        const sortedRooms = sortRooms(window.allRoomsData);
+
+        buildCardContainer(cardsContainer, sortedRooms);
 
     } catch (error) {
-        console.error("Error rendering room cards:", error);
-        cardsContainer.innerHTML = '<p class="text-center text-red-400 col-span-full">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
+        console.error('An error occurred during renderHomeRoomCards:', error); 
+        cardsContainer.innerHTML = `<p class="text-center text-red-400 col-span-full py-8">เกิดข้อผิดพลาด: ${error.message}</p>`;
+        updateRoomStatusSummary(0, 0, 0);
     }
+}
+
+function buildCardContainer(cardsContainer, sortedRooms) {
+    cardsContainer.innerHTML = '';
+
+    if (!sortedRooms || sortedRooms.length === 0) {
+        cardsContainer.innerHTML = `
+            <div class="col-span-full text-center py-12 bg-slate-800/50 rounded-lg">
+                <i class="fas fa-eye-slash text-5xl text-slate-500"></i>
+                <h3 class="mt-4 text-xl font-semibold text-white">ไม่พบข้อมูลห้องพัก</h3>
+                <p class="text-slate-400 mt-2">ไม่มีห้องพักที่ตรงกับเงื่อนไข หรือข้อมูลกำลังโหลด</p>
+            </div>
+        `;
+        return;
+    }
+
+    sortedRooms.forEach(room => {
+        try {
+            const { id, bill, status, tenantName } = room;
+
+            // --- Data validation and setting defaults ---
+            const billExists = bill && bill.id;
+            const currentTenantName = tenantName || (billExists ? bill.name : 'ไม่มีผู้เช่า');
+            const roomStatus = status || (billExists ? 'occupied' : 'vacant');
+            // Use totalAll if available, otherwise fallback to total, then 0
+            const totalAmount = billExists ? (bill.totalAll !== undefined ? bill.totalAll : (bill.total !== undefined ? bill.total : 0) ) : 0;
+            const dueDateInfo = billExists ? getDueDateInfo(bill.dueDate) : { text: 'ไม่มีข้อมูล', color: 'text-slate-500' };
+            const lastBillDate = billExists ? (bill.date || 'ไม่มีข้อมูล') : 'ไม่มีข้อมูล';
+
+            const card = document.createElement('div');
+            card.className = `room-card bg-slate-800 rounded-xl shadow-lg border border-slate-700/80 p-4 flex flex-col transition-all duration-300 hover:border-blue-500/70 hover:shadow-blue-500/10 relative`;
+            card.dataset.roomId = id;
+            
+            let statusBadgeHTML = '';
+            if (roomStatus === 'occupied') {
+                statusBadgeHTML = `<div class="absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-400/30">มีคนอยู่</div>`;
+            } else {
+                 statusBadgeHTML = `<div class="absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-400/30">ว่าง</div>`;
+            }
+
+            const totalAmountColor = totalAmount > 0 ? 'text-red-400' : 'text-slate-300';
+            
+            card.innerHTML = `
+                ${statusBadgeHTML}
+                <div class="flex-grow flex flex-col">
+                    <div class="flex-grow">
+                        <h3 class="text-3xl font-bold text-white tracking-wider">${id}</h3>
+                        <p class="text-sm text-slate-400 mt-1 flex items-center min-h-[20px]">
+                            <i class="fas fa-user w-4 mr-2 text-slate-500"></i>
+                            <span>${currentTenantName}</span>
+                        </p>
+
+                        <div class="mt-4 text-center bg-slate-800/50 rounded-lg py-2">
+                            <p class="text-xs text-slate-500">ยอดชำระล่าสุด</p>
+                            <p class="text-3xl font-light ${totalAmountColor} tracking-tight">
+                               ฿${Number(totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 space-y-1">
+                        <div class="flex justify-between text-xs text-slate-400">
+                            <span>กำหนดชำระ:</span>
+                            <span class="font-semibold ${dueDateInfo.color}">${dueDateInfo.text}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-slate-700 grid grid-cols-4 gap-2 text-center">
+                     <button onclick="viewRoomHistory('${id}')" title="ประวัติและเพิ่มบิล" class="card-icon-button">
+                        <i class="fas fa-history"></i>
+                    </button>
+                    <button onclick='generatePromptPayQR(${JSON.stringify(bill || {}).replace(/"/g, "&quot;")}); return false;' title="สร้าง QR Code" class="card-icon-button" ${!billExists ? 'disabled' : ''}>
+                        <i class="fas fa-qrcode"></i>
+                    </button>
+                    <button onclick="openAssessmentModal('${id}')" title="ใบประเมินอุปกรณ์" class="card-icon-button">
+                        <i class="fas fa-clipboard-check"></i>
+                    </button>
+                    <button onclick="openRoomSettingsModal('${id}')" title="ตั้งค่าห้อง" class="card-icon-button">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            `;
+            
+            cardsContainer.appendChild(card);
+
+        } catch (error) {
+            console.error(`CRITICAL: Failed to build card for room ID: ${room.id}.`, error);
+            const errorCard = document.createElement('div');
+            errorCard.className = 'bg-red-900/50 border border-red-700 rounded-lg p-4 text-center';
+            errorCard.innerHTML = `<p class="font-semibold text-red-300">เกิดข้อผิดพลาดในการแสดงผลห้อง ${room.id}</p><p class="text-xs text-red-400">${error.message}</p>`;
+            cardsContainer.appendChild(errorCard);
+        }
+    });
 }
 
 async function promptForTenantName(roomId, currentName) {
@@ -376,13 +411,12 @@ function buildCardContainer(cardsContainer, sortedRooms) {
             if (isPaymentConfirmed) {
                 paymentStatusHtml = `<div class="payment-status confirmed"><i class="fas fa-check-circle"></i>ชำระเงินแล้ว</div>`;
             } else if (dueDateInfo.show) {
-                let statusClass = 'due-soon'; // Default for upcoming
+                let statusClass = 'due-soon';
                 let icon = 'fa-clock';
                 if (dueDateInfo.text.includes('เกินกำหนด')) {
                     statusClass = 'overdue';
                     icon = 'fa-exclamation-circle';
                 }
-                
                 paymentStatusHtml = `<div class="payment-status ${statusClass}"><i class="fas ${icon}"></i>${dueDateInfo.text}</div>`;
             }
             getRoomName(roomData.room).then(roomname => {
@@ -612,23 +646,28 @@ async function renderHistoryTable(room) {
 // --- Data Manipulation ---
 
 async function loadFromFirebase(room = null) {
+    const user = auth.currentUser;
+    if (!user) {
+        return [];
+    }
+
+    let dataRef;
+    if (room) {
+        dataRef = db.ref(`electricityData`).orderByChild('room').equalTo(room);
+    } else {
+        dataRef = db.ref(`electricityData`);
+    }
+
     try {
-        const snapshot = await db.ref('electricityData').once('value');
-        let data = snapshot.val();
-        if (!data) return [];
-
-        let bills = Object.keys(data).map(key => ({ key, ...data[key] }));
-
-        // Filter out bills without room property
-        bills = bills.filter(bill => bill.room);
-
-        if (room) {
-            bills = bills.filter(bill => bill.room === room);
+        const snapshot = await dataRef.once('value');
+        const data = snapshot.val();
+        if (data) {
+            const dataArray = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+            return dataArray;
         }
-
-        return bills.sort((a, b) => new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-')));
+        return [];
     } catch (error) {
-        console.error('Error loading data from Firebase:', error);
+        console.error("CRITICAL: Error loading data from Firebase:", error);
         return [];
     }
 }
@@ -2988,15 +3027,26 @@ function openActionsMenu(event, bill) {
 
 // Add bulk data entry functionality
 function addBulkDataEntryButton() {
-    const headerSection = document.querySelector('#my-rooms-content .flex.items-center.gap-3');
-    if (!headerSection || !hasPermission('canAddNewBills') || document.getElementById('btn-bulk-data-entry')) return;
+    const isAdmin = window.currentUserRole === 'admin' || window.currentUserRole === '1';
+    if (!isAdmin) return;
 
-    const bulkDataBtn = document.createElement('button');
-    bulkDataBtn.id = 'btn-bulk-data-entry';
-    bulkDataBtn.className = 'btn btn-accent'; // Changed from btn-success
-    bulkDataBtn.innerHTML = '<i class="fas fa-database"></i>เพิ่มข้อมูลทุกห้อง';
-    bulkDataBtn.onclick = openBulkDataEntryModal;
-    headerSection.appendChild(bulkDataBtn);
+    const container = document.querySelector('#home-room-cards').previousElementSibling.querySelector('.flex.items-center.gap-3');
+    if (container && !document.getElementById('btn-bulk-add')) {
+        const button = document.createElement('button');
+        button.id = 'btn-bulk-add';
+        // Changed to purple button to match user's screenshot
+        button.className = 'btn bg-purple-600 hover:bg-purple-700 text-white';
+        button.innerHTML = '<i class="fas fa-database"></i> เพิ่มข้อมูลทุกห้อง';
+        button.onclick = openBulkDataEntryModal;
+        
+        // Insert after the Add Room button
+        const addRoomBtn = document.getElementById('btn-add-room');
+        if(addRoomBtn) {
+            addRoomBtn.insertAdjacentElement('afterend', button);
+        } else {
+            container.appendChild(button);
+        }
+    }
 }
 
 function openBulkDataEntryModal() {

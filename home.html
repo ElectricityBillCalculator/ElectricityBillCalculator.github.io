@@ -226,9 +226,15 @@
         <!-- Room Cards Section -->
         <section id="my-rooms-content" class="tab-content L1tab-content">
             <div class="flex flex-wrap justify-between items-center mb-8 gap-4" data-animation>
-                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-                    <i class="fas fa-door-open text-blue-400"></i>ห้องพัก
-                </h2>
+                <div class="flex items-center gap-6">
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                        <i class="fas fa-door-open text-blue-400"></i>ห้องพัก
+                    </h2>
+                    <div id="room-status-summary" class="flex items-center gap-4 text-sm text-slate-400 border-l border-slate-700 pl-4">
+                        <!-- Summary will be populated by script.js -->
+                        <span class="flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i>กำลังโหลด...</span>
+                    </div>
+                </div>
                 <div class="flex items-center gap-3">
                      <button id="btn-add-room" class="btn btn-primary">
                         <i class="fas fa-plus-circle"></i>เพิ่มห้องใหม่
