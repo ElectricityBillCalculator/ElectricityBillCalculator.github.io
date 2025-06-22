@@ -279,11 +279,28 @@ body {
     min-height: 1.5rem; /* Ensure consistent height */
 }
 
+.room-card .card-details {
+    font-size: 0.875rem;
+    color: var(--slate-500);
+    margin-top: 1.25rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 1.25rem; /* Ensure consistent height */
+}
+
 .room-card .total-amount {
     font-size: 2.25rem;
     font-weight: 700;
     line-height: 1;
-    margin-top: 1.25rem;
+    margin-top: 0.5rem;
+    color: var(--slate-400);
+    min-height: 1.5rem; /* Ensure consistent height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 .room-card .payment-status-wrapper {
@@ -408,4 +425,21 @@ body {
 .animate-on-load {
     animation-name: fadeInUp;
     animation-duration: 0.8s;
+}
+
+.room-name .edit-name-btn {
+    background: none;
+    border: none;
+    color: var(--slate-500);
+    cursor: pointer;
+    padding: 0.25rem;
+    font-size: 0.8rem;
+    line-height: 1;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.room-name .edit-name-btn:hover {
+    color: var(--slate-300);
+    background-color: var(--slate-700);
 } 

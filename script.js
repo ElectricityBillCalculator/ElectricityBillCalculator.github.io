@@ -215,7 +215,15 @@ async function renderHomeRoomCards() {
             <div class="room-card" data-room-id="${roomId}">
                 <div class="card-content">
                     <div class="room-number">${roomId}</div>
-                    <div class="room-name truncate">${tenantName}</div>
+                    <div class="room-name truncate">
+                        <span>${tenantName}</span>
+                        <button class="edit-name-btn" onclick="promptForTenantName('${roomId}', '${tenantName}')" title="แก้ไขชื่อผู้เช่า">
+                            <i class="fas fa-pencil-alt fa-xs"></i>
+                        </button>
+                    </div>
+                    <div class="card-details">
+                        ${roomSettings.roomSize ? `<span><i class="fas fa-ruler-combined fa-xs"></i> ${roomSettings.roomSize}</span>` : ''}
+                    </div>
                     <div class="total-amount ${isPaymentConfirmed ? 'paid' : amountColorClass}">
                         ฿${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                     </div>
@@ -235,6 +243,7 @@ async function renderHomeRoomCards() {
         // Staggered animation for cards
         const cards = cardsContainer.querySelectorAll('.room-card');
         cards.forEach((card, index) => {
+            card.style.setProperty('--animation-delay', `${index * 50}ms`);
             card.classList.add('card-enter');
             setTimeout(() => {
                 card.classList.add('card-enter-active');
@@ -246,6 +255,63 @@ async function renderHomeRoomCards() {
         console.error("Error rendering room cards:", error);
         cardsContainer.innerHTML = '<p class="text-center text-red-400 col-span-full">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
     }
+}
+
+async function promptForTenantName(roomId, currentName) {
+    const newName = prompt(`แก้ไขชื่อผู้เช่าสำหรับห้อง ${roomId}:`, currentName);
+    if (newName && newName.trim() !== '' && newName !== currentName) {
+        try {
+            await db.ref(`rooms/${roomId}`).update({ tenantName: newName.trim() });
+            showAlert('อัปเดตชื่อผู้เช่าสำเร็จ', 'success');
+            renderHomeRoomCards();
+        } catch (error) {
+            // If the room doesn't exist in the 'rooms' collection yet, create it.
+            if (error.message.includes("permission_denied")) { // A bit of a guess, but common for non-existent paths
+                 try {
+                    const newRoomSettings = {
+                        tenantName: newName.trim(),
+                        rent: 0,
+                        roomSize: '',
+                        addons: [],
+                        createdAt: new Date().toISOString(),
+                        createdBy: auth.currentUser?.uid || 'system_generated',
+                        assessmentFormUrl: ''
+                    };
+                    await db.ref(`rooms/${roomId}`).set(newRoomSettings);
+                    showAlert('สร้างและอัปเดตชื่อผู้เช่าสำเร็จ', 'success');
+                    renderHomeRoomCards();
+                 } catch (e) {
+                    console.error('Failed to create room settings while updating name:', e);
+                    showAlert('เกิดข้อผิดพลาดในการบันทึกชื่อ', 'error');
+                 }
+            } else {
+                console.error('Error updating tenant name:', error);
+                showAlert('เกิดข้อผิดพลาดในการบันทึกชื่อ', 'error');
+            }
+        }
+    }
+}
+
+function getDueDateInfo(dueDate) {
+    if (!dueDate) return { show: false, text: '' };
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Normalize today's date
+    dueDate.setHours(0, 0, 0, 0); // Normalize due date
+
+    const diffTime = Math.abs(dueDate - now);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+        return { show: true, text: `เกินกำหนด ${Math.abs(diffDays)} วัน`, color: 'text-red-500 animate-pulse' };
+    }
+    if (diffDays === 0) {
+        return { show: true, text: `ครบกำหนดวันนี้`, color: 'text-red-400 font-bold' };
+    }
+    if (diffDays <= 7) {
+        return { show: true, text: `ครบกำหนดใน ${diffDays} วัน`, color: 'text-yellow-400' };
+    }
+
+    return { show: true, text: `ครบกำหนดวันที่ ${dueDate.toLocaleDateString()}`, color: 'text-gray-400' };
 }
 
 function buildCardContainer(cardsContainer, sortedRooms) {
