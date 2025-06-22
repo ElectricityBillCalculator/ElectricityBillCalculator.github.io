@@ -50,94 +50,36 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 // Initialize Flatpickr date pickers
 function initializeFlatpickr() {
-    const flatpickrConfig = {
+    const commonOptions = {
         dateFormat: "d/m/Y",
+        altInput: true,
+        altFormat: "j F Y",
         locale: "th",
-        allowInput: true // Allow manual input
+        allowInput: true
     };
 
-    // For Add Room Modal
-    if (document.getElementById('add-room-date')) {
-        const el = document.getElementById('add-room-date');
-        if (el._flatpickr) el._flatpickr.destroy();
-        flatpickr(el, { ...flatpickrConfig, defaultDate: "today" });
-    }
-    if (document.getElementById('add-room-due-date')) {
-        const el = document.getElementById('add-room-due-date');
-        if (el._flatpickr) el._flatpickr.destroy();
-        flatpickr(el, { ...flatpickrConfig, defaultDate: new Date().fp_incr(15) });
-    }
-
-    // For Bulk Data Modal
-    if (document.getElementById('bulk-date')) {
-        const el = document.getElementById('bulk-date');
-        if (el._flatpickr) el._flatpickr.destroy();
-        flatpickr(el, { ...flatpickrConfig, defaultDate: "today" });
-    }
-    if (document.getElementById('bulk-due-date')) {
-        const el = document.getElementById('bulk-due-date');
-        if (el._flatpickr) el._flatpickr.destroy();
-        flatpickr(el, { ...flatpickrConfig, defaultDate: new Date().fp_incr(15) });
-    }
+    flatpickr("#add-room-date", commonOptions);
+    flatpickr("#add-room-due-date", commonOptions);
 }
 
 function initializePageContent() {
-    
-    // Route to the correct function based on the current page
-    if (document.getElementById('home-room-cards') || document.getElementById('level1-owner-tabs-container')) { // Check for L1 tabs too
-        renderHomeRoomCards(); // This will now use global currentUser, currentUserRole, currentUserData
-        console.log('Current user role:', window.currentUserRole);
-        // Initialize Level 1 Owner specific UI if applicable
-        
-        if (window.currentUserRole == '1') {
-            if (typeof initializeLevel1OwnerInterface === 'function') {
-                initializeLevel1OwnerInterface();
-            } else {
-                console.error('initializeLevel1OwnerInterface function not found. Make sure tenantManagement.js is loaded.');
-            }
-        } else {
-            // Hide L1 specific elements if user is not L1
-            const l1Tabs = document.getElementById('level1-owner-tabs-container');
-            if (l1Tabs) l1Tabs.classList.add('hidden');
-            const tenantManagementSection = document.getElementById('manage-tenants-content');
-            if (tenantManagementSection) tenantManagementSection.classList.add('hidden');
-            // Ensure default room content is visible for non-L1 if L1 tabs were planned
-             const myRoomsContent = document.getElementById('my-rooms-content');
-             if (myRoomsContent) myRoomsContent.classList.remove('hidden');
-        }
-
-        // Add event listeners for the 'Add Room' modal - permission check inside handler or here
-        // This button might be visible to Admin and Level 1 Owner
-        const addRoomBtn = document.getElementById('btn-add-room');
-        const closeAddRoomModalBtn = document.getElementById('close-add-room-modal');
-        const addRoomModal = document.getElementById('add-room-modal');
-        const addRoomForm = document.getElementById('add-room-form');
-
-        // Show/hide add room button based on permissions
-        if (addRoomBtn) {
-            if (hasPermission('canAddNewBills')) {
-                addRoomBtn.classList.remove('hidden');
-                addRoomBtn.addEventListener('click', () => openModal('add-room-modal'));
-            } else {
-                addRoomBtn.classList.add('hidden');
-            }
-        }
-        
-        if(closeAddRoomModalBtn) closeAddRoomModalBtn.addEventListener('click', () => closeModal('add-room-modal'));
-        if(addRoomForm) addRoomForm.addEventListener('submit', handleAddRoom);
-        
-        // Initialize evidence modal listeners for home page - only for admin
-        if (hasPermission('canUploadEvidence')) {
-            setupEvidenceModalListeners();
-        }
-
-        // Add bulk data entry button for all rooms
+    if (document.getElementById('home-room-cards')) {
+        // This is the home.html page
+        initializeFlatpickr();
+        renderHomeRoomCards();
         addBulkDataEntryButton();
 
+        // FIX: Add event listeners for all modal close buttons for robustness
+        document.getElementById('close-add-room-modal')?.addEventListener('click', () => closeModal('add-room-modal'));
+        document.getElementById('close-settings-modal')?.addEventListener('click', () => closeModal('room-settings-modal'));
+        document.getElementById('close-invoice-modal')?.addEventListener('click', () => closeModal('invoice-modal'));
+        document.getElementById('close-tenant-modal')?.addEventListener('click', () => closeModal('add-edit-tenant-modal'));
+        document.getElementById('confirm-modal-cancel-btn')?.addEventListener('click', () => closeModal('confirm-modal'));
+        
     } else if (document.getElementById('history-section')) {
         // This is the index.html page for a specific room
-        const params = new URLSearchParams(window.location.search);
-        const roomParam = params.get('room');
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomParam = urlParams.get('room');
         if (roomParam) {
             document.title = `ประวัติค่าไฟ - ห้อง ${roomParam}`;
             renderHistoryTable(roomParam);
@@ -173,52 +115,122 @@ async function renderHomeRoomCards() {
     cardsContainer.innerHTML = `<p class="text-center text-gray-400 col-span-full py-8">กำลังโหลดข้อมูลห้องพัก...</p>`;
 
     try {
-        let allBills = await loadFromFirebase();
-        if (!allBills || allBills.length === 0) {
-            cardsContainer.innerHTML = '<p class="text-center text-gray-400 col-span-full">ยังไม่มีข้อมูลห้องพัก</p>';
-            return;
-        }
+        console.log("--- เริ่มกระบวนการแสดงผลการ์ด ---");
+        // 1. Fetch all room settings first
+        const roomsSnapshot = await db.ref('rooms').once('value');
+        const roomsData = roomsSnapshot.val() || {};
+        console.log("1. ข้อมูลห้องพักทั้งหมด (Rooms):", JSON.parse(JSON.stringify(roomsData)));
 
+
+        // 2. Fetch all bills
+        const billsSnapshot = await db.ref('electricityData').once('value');
+        const billsData = billsSnapshot.val() || {};
+        console.log("2. ข้อมูลบิลทั้งหมด (Bills):", JSON.parse(JSON.stringify(billsData)));
+
+        // --- Create a master list of all room IDs from both sources ---
+        const roomIdsFromRooms = Object.keys(roomsData);
+        const roomIdsFromBills = Object.values(billsData).map(bill => bill.room);
+        const allRoomIds = [...new Set([...roomIdsFromRooms, ...roomIdsFromBills])].filter(id => id); // Create a unique list and remove any falsy values
+        console.log("2A. ID ห้องทั้งหมดจากทุกแหล่ง (Master List):", allRoomIds);
+
+
+        // Create a map of latest bills for each room
+        const latestBills = {};
+        for (const key in billsData) {
+            const bill = { key, ...billsData[key] };
+
+            // --- DEBUG LOG & SAFETY CHECK ---
+            // ตรวจสอบว่าบิลมีข้อมูลวันที่ที่ถูกต้องหรือไม่
+            if (!bill || !bill.date || typeof bill.date !== 'string' || bill.date.split('/').length !== 3) {
+                console.warn(`[LOG] ข้ามบิลเนื่องจากข้อมูลวันที่ไม่ถูกต้อง:`, bill);
+                continue; // ข้ามบิลนี้ไป
+            }
+            
+            const existingBill = latestBills[bill.room];
+
+            // เปรียบเทียบวันที่เพื่อหาบิลล่าสุด
+            if (!existingBill || new Date(bill.date.split('/').reverse().join('-')) > new Date(existingBill.date.split('/').reverse().join('-'))) {
+                latestBills[bill.room] = bill;
+            }
+        }
+        console.log("3. ข้อมูลบิลล่าสุดของแต่ละห้อง (Latest Bills Map):", JSON.parse(JSON.stringify(latestBills)));
+        
+        // Filter rooms based on user permissions
         const user = window.currentUser;
         const userRole = window.currentUserRole;
         const userData = window.currentUserData;
-        let displayableBills = [];
+        let displayableRoomIds = allRoomIds; // Start with the master list of all rooms
 
-        if (userRole === 'admin' || (userRole === 'user' && hasPermission('canViewAllRooms'))) {
-            displayableBills = allBills;
-        } else if (userRole === '1' && userData && userData.managedRooms) {
-            displayableBills = allBills.filter(bill => userData.managedRooms.includes(bill.room));
+        if (userRole === '1' && userData && userData.managedRooms) {
+            displayableRoomIds = displayableRoomIds.filter(roomId => userData.managedRooms.includes(roomId));
         } else if (userRole === 'level1_tenant' && userData && userData.accessibleRooms) {
-            displayableBills = allBills.filter(bill => userData.accessibleRooms.includes(bill.room));
-        } else {
-            cardsContainer.innerHTML = `<p class="text-center text-red-400 col-span-full">คุณไม่มีสิทธิ์ดูข้อมูลห้อง</p>`;
-            return;
+            displayableRoomIds = displayableRoomIds.filter(roomId => userData.accessibleRooms.includes(roomId));
         }
 
-        if (displayableBills.length === 0) {
+        console.log("4. ID ห้องทั้งหมดที่จะแสดงผล:", displayableRoomIds);
+
+        if (displayableRoomIds.length === 0) {
             cardsContainer.innerHTML = '<p class="text-center text-gray-400 col-span-full">ไม่พบข้อมูลห้องพักที่คุณมีสิทธิ์เข้าถึง</p>';
             return;
         }
-        
-        const rooms = {};
-        displayableBills.forEach(bill => {
-            if (bill && typeof bill.room !== 'undefined' && bill.room !== null && String(bill.room).trim() !== '') {
-                if (bill.date && typeof bill.date === 'string' && bill.date.split('/').length === 3) {
-                    if (!rooms[bill.room] || new Date(bill.date.split('/').reverse().join('-')) > new Date(rooms[bill.room].date.split('/').reverse().join('-'))) {
-                        rooms[bill.room] = bill;
-                    }
-                } else {
-                     if (!rooms[bill.room]) {
-                        rooms[bill.room] = bill;
-                        console.warn('Bill added but date is invalid:', bill);
-                    }
+
+        const sortedRoomIds = displayableRoomIds.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+        cardsContainer.innerHTML = sortedRoomIds.map(roomId => {
+            const roomSettings = roomsData[roomId] || {};
+            const latestBill = latestBills[roomId] || null; // Use null for clarity
+            
+            console.log(`[LOG] กำลังสร้างการ์ดสำหรับห้อง ${roomId}:`, { roomSettings, latestBill });
+
+            const addonsTotal = (roomSettings.addons || []).reduce((acc, addon) => acc + Number(addon.price || 0), 0);
+            const rent = Number(roomSettings.rent || 0);
+            const electricTotal = latestBill ? Number(latestBill.total || 0) : 0;
+            const waterTotal = latestBill ? Number(latestBill.waterTotal || 0) : 0;
+            const totalAmount = rent + electricTotal + waterTotal + addonsTotal;
+
+            const isPaymentConfirmed = latestBill ? latestBill.paymentConfirmed === true : false;
+            const dueDateInfo = getDueDateInfo(latestBill ? latestBill.dueDate : null);
+            const amountColorClass = getAmountColorClass(totalAmount);
+            
+            // --- SAFETY CHECK ---
+            const formattedDate = (latestBill && latestBill.date) ? new Date(latestBill.date.split('/').reverse().join('-')).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'ยังไม่มีบิล';
+
+            let paymentStatusHtml = '';
+            if (isPaymentConfirmed) {
+                paymentStatusHtml = `<div class="payment-status confirmed"><i class="fas fa-check-circle"></i>ชำระเงินแล้ว</div>`;
+            } else if (dueDateInfo.show) {
+                let statusClass = 'due-soon';
+                let icon = 'fa-clock';
+                if (dueDateInfo.text.includes('เกินกำหนด')) {
+                    statusClass = 'overdue';
+                    icon = 'fa-exclamation-circle';
                 }
+                paymentStatusHtml = `<div class="payment-status ${statusClass}"><i class="fas ${icon}"></i>${dueDateInfo.text}</div>`;
             }
-        });
 
-        const sortedRooms = Object.values(rooms).sort((a, b) => String(a.room).localeCompare(String(b.room)));
+            // Fallback for tenant name if not set in room settings
+            const tenantName = roomSettings.tenantName || (latestBill ? latestBill.name : 'ยังไม่มีผู้เช่า');
 
-        buildCardContainer(cardsContainer, sortedRooms);
+            return `
+            <div class="room-card" data-room-id="${roomId}">
+                <div class="card-content">
+                    <div class="room-number">${roomId}</div>
+                    <div class="room-name truncate">${tenantName}</div>
+                    <div class="total-amount ${isPaymentConfirmed ? 'paid' : amountColorClass}">
+                        ฿${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </div>
+                    <div class="payment-status-wrapper">
+                        ${paymentStatusHtml}
+                    </div>
+                </div>
+                <div class="card-footer flex justify-around items-center gap-2">
+                    <button onclick="viewRoomHistory('${roomId}')" class="btn btn-primary" title="ดูประวัติ"><i class="fas fa-history"></i></button>
+                    <button onclick="generateInvoice('${latestBill ? latestBill.key : ''}')" class="btn btn-success" title="ใบแจ้งหนี้" ${!latestBill ? 'disabled' : ''}><i class="fas fa-file-invoice-dollar"></i></button>
+                    <button onclick="openRoomSettingsModal('${roomId}')" class="btn btn-secondary" title="ตั้งค่าห้อง"><i class="fas fa-cog"></i></button>
+                </div>
+            </div>
+            `;
+        }).join('');
 
         // Staggered animation for cards
         const cards = cardsContainer.querySelectorAll('.room-card');
@@ -228,6 +240,7 @@ async function renderHomeRoomCards() {
                 card.classList.add('card-enter-active');
             }, 100 * index);
         });
+        console.log("--- สิ้นสุดกระบวนการแสดงผลการ์ด ---");
 
     } catch (error) {
         console.error("Error rendering room cards:", error);
@@ -577,119 +590,73 @@ async function deleteBill(key) {
 
 async function handleAddRoom(event) {
     event.preventDefault();
-    
     if (!hasPermission('canAddNewBills')) {
-        showAlert('คุณไม่มีสิทธิ์เพิ่มข้อมูลใหม่', 'error');
+        showAlert('คุณไม่มีสิทธิ์เพิ่มห้องใหม่', 'error');
+        return;
+    }
+
+    const roomNumber = document.getElementById('add-room-room').value.trim();
+    if (!roomNumber) {
+        showAlert('กรุณากรอกเลขห้อง', 'error');
         return;
     }
 
     try {
-        // Get form values
-        const room = document.getElementById('add-room-room').value.trim();
-        const name = document.getElementById('add-room-name').value.trim();
-        const date = document.getElementById('add-room-date').value.trim();
-        const current = parseFloat(document.getElementById('add-room-current').value) || 0;
-        const previous = parseFloat(document.getElementById('add-room-previous').value) || 0;
-        const rate = parseFloat(document.getElementById('add-room-rate').value) || 0;
-        const totalall = parseFloat(document.getElementById('add-room-totalall').value) || 0;
-        
-        // Water values
-        const waterCurrent = parseFloat(document.getElementById('add-room-water-current').value) || 0;
-        const waterPrevious = parseFloat(document.getElementById('add-room-water-previous').value) || 0;
-        const waterRate = parseFloat(document.getElementById('add-room-water-rate').value) || 0;
-        const waterTotalall = parseFloat(document.getElementById('add-room-water-totalall').value) || 0;
+        const roomRef = db.ref(`rooms/${roomNumber}`);
+        const snapshot = await roomRef.once('value');
 
-        // Validate required fields
-        if (!room || !name || !date) {
-            showAlert('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน', 'error');
+        if (snapshot.exists()) {
+            showAlert('มีห้องหมายเลขนี้ในระบบแล้ว', 'error');
             return;
         }
 
-        if (current < previous) {
-            showAlert('ค่ามิเตอร์ไฟฟ้าปัจจุบันต้องไม่น้อยกว่าครั้งที่แล้ว', 'error');
-            return;
-        }
+        const initialTenantName = document.getElementById('add-room-name').value.trim();
+        const initialRent = parseFloat(document.getElementById('add-room-rent').value) || 0;
+        const initialRoomSize = document.getElementById('add-room-size').value.trim();
 
-        if (waterCurrent < waterPrevious) {
-            showAlert('ค่ามิเตอร์น้ำปัจจุบันต้องไม่น้อยกว่าครั้งที่แล้ว', 'error');
-            return;
-        }
+        const newRoomData = {
+            rent: initialRent,
+            roomSize: initialRoomSize,
+            tenantName: initialTenantName,
+            createdAt: new Date().toISOString(),
+            createdBy: auth.currentUser?.uid || 'unknown',
+            addons: [],
+            assessmentFormUrl: ''
+        };
 
-        // Calculate units and totals
-        const units = current - previous;
-        const total = units * rate;
-        const waterUnits = waterCurrent - waterPrevious;
-        const waterTotal = waterUnits * waterRate;
+        await roomRef.set(newRoomData);
 
-        // Prepare data
-        const newBill = {
-            room,
-            name,
-            date,
-            current,
-            previous,
-            units,
-            rate,
-            total,
-            totalall,
-            waterCurrent,
-            waterPrevious,
-            waterUnits,
-            waterRate,
-            waterTotal,
-            waterTotalall,
+        // Also add a new bill record for this room
+        const billData = {
+            room: roomNumber,
+            name: initialTenantName,
+            date: document.getElementById('add-room-date').value.trim(),
+            current: parseFloat(document.getElementById('add-room-current').value) || 0,
+            previous: parseFloat(document.getElementById('add-room-previous').value) || 0,
+            rate: parseFloat(document.getElementById('add-room-rate').value) || 0,
+            waterCurrent: parseFloat(document.getElementById('add-room-water-current').value) || 0,
+            waterPrevious: parseFloat(document.getElementById('add-room-water-previous').value) || 0,
+            waterRate: parseFloat(document.getElementById('add-room-water-rate').value) || 0,
+            // Calculate totals
+            units: (parseFloat(document.getElementById('add-room-current').value) || 0) - (parseFloat(document.getElementById('add-room-previous').value) || 0),
+            total: ((parseFloat(document.getElementById('add-room-current').value) || 0) - (parseFloat(document.getElementById('add-room-previous').value) || 0)) * (parseFloat(document.getElementById('add-room-rate').value) || 0),
+            waterUnits: (parseFloat(document.getElementById('add-room-water-current').value) || 0) - (parseFloat(document.getElementById('add-room-water-previous').value) || 0),
+            waterTotal: ((parseFloat(document.getElementById('add-room-water-current').value) || 0) - (parseFloat(document.getElementById('add-room-water-previous').value) || 0)) * (parseFloat(document.getElementById('add-room-water-rate').value) || 0),
+            dueDate: document.getElementById('add-room-due-date').value.trim(),
             createdAt: new Date().toISOString(),
             createdBy: auth.currentUser?.uid || 'unknown'
         };
-
-        // Save to Firebase
-        const newBillRef = await db.ref('electricityData').push(newBill);
-        const newBillKey = newBillRef.key; // Get the key of the new bill/room entry in electricityData
         
-        showAlert('เพิ่มข้อมูลห้องใหม่เรียบร้อยแล้ว', 'success');
-
-        // If the current user is Level 1 Owner, add this new room to their managedRooms
-        if (window.currentUserRole === '1' && window.currentUser && window.currentUser.uid) {
-            const userManagedRoomsRef = db.ref(`users/${window.currentUser.uid}/managedRooms`);
-            userManagedRoomsRef.once('value', snapshot => {
-                let managedRooms = snapshot.val() || [];
-                if (!Array.isArray(managedRooms)) { // Ensure it's an array
-                    managedRooms = [];
-                }
-                if (!managedRooms.includes(newBill.room)) {
-                    managedRooms.push(newBill.room);
-                    userManagedRoomsRef.set(managedRooms).then(() => {
-                        console.log(`Room ${newBill.room} added to managedRooms for user ${window.currentUser.uid}`);
-                        // Update local currentUserData as well
-                        if (window.currentUserData) {
-                            window.currentUserData.managedRooms = managedRooms;
-                        }
-                        // If tenant management UI is active, refresh room list in modal
-                        if (typeof loadManagedRoomsForTenantModal === 'function' &&
-                            document.getElementById('level1-owner-tabs-container') &&
-                            !document.getElementById('level1-owner-tabs-container').classList.contains('hidden') &&
-                            document.getElementById('add-edit-tenant-modal') &&
-                            !document.getElementById('add-edit-tenant-modal').classList.contains('hidden') ) {
-                            loadManagedRoomsForTenantModal();
-                        }
-                    }).catch(error => {
-                        console.error('Failed to update managedRooms:', error);
-                        showAlert('เพิ่มห้องใหม่สำเร็จ แต่เกิดข้อผิดพลาดในการอัปเดตรายการห้องที่จัดการ', 'warning');
-                    });
-                }
-            });
-        }
-
-        // Close modal and reset form
+        await db.ref('electricityData').push(billData);
+        
+        showAlert(`สร้างห้อง ${roomNumber} สำเร็จ`, 'success');
         closeModal('add-room-modal');
         document.getElementById('add-room-form').reset();
-
-        // Refresh room cards
         renderHomeRoomCards();
 
     } catch (error) {
-        console.error('Error adding room:', error);
-        showAlert('เกิดข้อผิดพลาดในการเพิ่มข้อมูล', 'error');
+        console.error('Error adding new room:', error);
+        showAlert('เกิดข้อผิดพลาดในการสร้างห้องใหม่', 'error');
     }
 }
 
@@ -3612,5 +3579,386 @@ async function getEvidenceMetadata(evidenceUrl) {
     } catch (error) {
         console.error('Error getting evidence metadata:', error);
         return null;
+    }
+}
+
+async function openRoomSettingsModal(roomId) {
+    const modal = document.getElementById('room-settings-modal');
+    const modalBody = document.getElementById('room-settings-body');
+    const roomNumberSpan = document.getElementById('settings-room-number');
+
+    if (!modal || !modalBody || !roomNumberSpan) return;
+    
+    roomNumberSpan.textContent = roomId;
+    modalBody.innerHTML = `<div class="text-center p-8"><i class="fas fa-spinner fa-spin text-3xl"></i></div>`;
+    openModal('room-settings-modal');
+
+    try {
+        const roomSnapshot = await db.ref(`rooms/${roomId}`).once('value');
+        if (roomSnapshot.exists()) {
+            const roomData = roomSnapshot.val();
+            renderSettingsModalBody(roomId, roomData);
+        } else {
+            console.warn(`[Settings] No settings for room ${roomId}. Showing form to create them.`);
+            // Fetch latest bill to get the tenant name as a fallback
+            const billsSnapshot = await db.ref('electricityData').orderByChild('room').equalTo(roomId).once('value');
+            let latestBill = null;
+            if (billsSnapshot.exists()) {
+                const bills = billsSnapshot.val();
+                for (const key in bills) {
+                    const bill = { key, ...bills[key] };
+                    if (!bill.date || typeof bill.date !== 'string' || bill.date.split('/').length !== 3) continue;
+                    if (!latestBill || new Date(bill.date.split('/').reverse().join('-')) > new Date(latestBill.date.split('/').reverse().join('-'))) {
+                        latestBill = bill;
+                    }
+                }
+            }
+            const fallbackData = {
+                tenantName: latestBill ? latestBill.name : '',
+            };
+            renderSettingsModalBody(roomId, fallbackData);
+        }
+    } catch (error) {
+        console.error(`Error loading settings for room ${roomId}:`, error);
+        modalBody.innerHTML = `<p class="text-red-400 text-center">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>`;
+    }
+}
+
+function renderSettingsModalBody(roomId, roomData = {}) {
+    const modalBody = document.getElementById('room-settings-body');
+    if (!modalBody) return;
+
+    const tenantName = roomData.tenantName || '';
+    const rent = roomData.rent || 0;
+    const roomSize = roomData.roomSize || '';
+    const addons = roomData.addons || [];
+    
+    modalBody.innerHTML = `
+        <div class="space-y-6">
+            <!-- General Settings -->
+            <fieldset class="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
+                <legend class="font-semibold text-lg text-white px-2">ข้อมูลทั่วไป</legend>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                    <div class="form-group">
+                        <label class="form-label" for="settings-tenant-name">ชื่อผู้เช่า</label>
+                        <input type="text" id="settings-tenant-name" class="form-input" value="${tenantName}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="settings-rent">ค่าเช่า (บาท)</label>
+                        <input type="number" id="settings-rent" class="form-input" value="${rent}">
+                    </div>
+                    <div class="form-group sm:col-span-2">
+                        <label class="form-label" for="settings-room-size">ขนาดห้อง</label>
+                        <input type="text" id="settings-room-size" class="form-input" value="${roomSize}">
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Add-ons -->
+            <fieldset class="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
+                <legend class="font-semibold text-lg text-white px-2">ค่าบริการเสริม</legend>
+                <div id="settings-addons-container" class="space-y-3 mt-4">
+                    ${addons.map((addon, index) => `
+                        <div class="flex items-center gap-2" id="addon-item-${index}">
+                            <input type="text" class="form-input flex-grow addon-name-input" placeholder="ชื่อบริการ" value="${addon.name || ''}">
+                            <input type="number" class="form-input w-32 addon-price-input" placeholder="ราคา" value="${addon.price || 0}">
+                            <button type="button" class="btn-danger rounded-full h-8 w-8 flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    `).join('')}
+                </div>
+                <button type="button" id="settings-add-addon-btn" class="mt-4 w-full text-sm btn btn-secondary"><i class="fas fa-plus"></i>เพิ่มบริการเสริม</button>
+            </fieldset>
+            
+            <!-- Assessment Form -->
+            <fieldset class="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
+                 <legend class="font-semibold text-lg text-white px-2">ใบประเมินอุปกรณ์</legend>
+                 <div id="settings-assessment-container" class="mt-4"></div>
+            </fieldset>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-between items-center pt-4 border-t border-slate-600 mt-6">
+                 <button type="button" onclick="deleteRoom('${roomId}')" class="btn btn-danger"><i class="fas fa-trash"></i> ลบห้องนี้</button>
+                 <button type="button" onclick="saveRoomSettings('${roomId}')" class="btn btn-primary"><i class="fas fa-save"></i> บันทึกการเปลี่ยนแปลง</button>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('settings-add-addon-btn').addEventListener('click', () => {
+        const container = document.getElementById('settings-addons-container');
+        const newAddon = document.createElement('div');
+        newAddon.className = 'flex items-center gap-2 animate-on-load';
+        newAddon.innerHTML = `
+            <input type="text" class="form-input flex-grow addon-name-input" placeholder="ชื่อบริการ">
+            <input type="number" class="form-input w-32 addon-price-input" placeholder="ราคา">
+            <button type="button" class="btn-danger rounded-full h-8 w-8 flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-trash-alt"></i></button>
+        `;
+        container.appendChild(newAddon);
+    });
+    
+    renderAssessmentSection(roomId, roomData.assessmentFormUrl || '');
+}
+
+async function saveRoomSettings(roomId) {
+    const tenantName = document.getElementById('settings-tenant-name').value;
+    const rent = parseFloat(document.getElementById('settings-rent').value) || 0;
+    const roomSize = document.getElementById('settings-room-size').value;
+
+    const addons = [];
+    const addonNameInputs = document.querySelectorAll('#settings-addons-container .addon-name-input');
+    const addonPriceInputs = document.querySelectorAll('#settings-addons-container .addon-price-input');
+    addonNameInputs.forEach((nameInput, i) => {
+        const name = nameInput.value.trim();
+        const price = parseFloat(addonPriceInputs[i].value) || 0;
+        if (name) {
+            addons.push({ name, price });
+        }
+    });
+
+    try {
+        const roomRef = db.ref(`rooms/${roomId}`);
+        const snapshot = await roomRef.once('value');
+        
+        if (snapshot.exists()) {
+            await roomRef.update({ tenantName, rent, roomSize, addons });
+        } else {
+            const newRoomSettings = {
+                tenantName,
+                rent,
+                roomSize,
+                addons,
+                createdAt: new Date().toISOString(),
+                createdBy: auth.currentUser?.uid || 'system_generated',
+                assessmentFormUrl: ''
+            };
+            await roomRef.set(newRoomSettings);
+        }
+
+        showAlert('บันทึกการตั้งค่าสำเร็จ', 'success');
+        closeModal('room-settings-modal');
+        renderHomeRoomCards();
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showAlert('เกิดข้อผิดพลาดในการบันทึก', 'error');
+    }
+}
+
+function renderAssessmentSection(roomId, assessmentUrl) {
+    const container = document.getElementById('settings-assessment-container');
+    if (!container) return;
+
+    let content = '';
+    if (assessmentUrl) {
+        content = `
+            <p class="text-slate-300 mb-2">ใบประเมินปัจจุบัน:</p>
+            <img src="${assessmentUrl}" class="rounded-lg max-w-xs h-auto shadow-md mb-2">
+            <button class="btn btn-secondary btn-sm" onclick="deleteAssessment('${roomId}')"><i class="fas fa-trash"></i> ลบรูปนี้</button>
+        `;
+    } else {
+        content = `
+            <p class="text-slate-400 mb-2">ยังไม่มีใบประเมิน</p>
+            <input type="file" id="assessment-upload-input" class="form-input" accept="image/*">
+            <button class="btn btn-primary btn-sm mt-2" onclick="handleAssessmentUpload('${roomId}')"><i class="fas fa-upload"></i> อัปโหลด</button>
+        `;
+    }
+    container.innerHTML = content;
+}
+
+async function handleAssessmentUpload(roomId) {
+    const fileInput = document.getElementById('assessment-upload-input');
+    const file = fileInput.files[0];
+    if (!file) {
+        showAlert('กรุณาเลือกไฟล์', 'error');
+        return;
+    }
+    showAlert('กำลังอัปโหลด...', 'info');
+    try {
+        const storageRef = firebase.storage().ref();
+        const filePath = `assessmentForms/${roomId}/${Date.now()}_${file.name}`;
+        const fileRef = storageRef.child(filePath);
+        await fileRef.put(file);
+        const url = await fileRef.getDownloadURL();
+        await db.ref(`rooms/${roomId}`).update({ assessmentFormUrl: url });
+        showAlert('อัปโหลดสำเร็จ', 'success');
+        renderAssessmentSection(roomId, url);
+    } catch (error) {
+        console.error('Upload failed:', error);
+        showAlert('อัปโหลดล้มเหลว', 'error');
+    }
+}
+
+async function deleteAssessment(roomId) {
+    if (!confirm('แน่ใจหรือไม่ว่าต้องการลบใบประเมินนี้?')) return;
+    showAlert('กำลังลบ...', 'info');
+    try {
+        const roomRef = db.ref(`rooms/${roomId}`);
+        const snapshot = await roomRef.once('value');
+        const fileUrl = snapshot.val().assessmentFormUrl;
+        if (fileUrl) {
+            const fileRef = firebase.storage().refFromURL(fileUrl);
+            await fileRef.delete();
+        }
+        await roomRef.update({ assessmentFormUrl: '' });
+        showAlert('ลบสำเร็จ', 'success');
+        renderAssessmentSection(roomId, '');
+    } catch (error) {
+        console.error('Delete failed:', error);
+        showAlert('การลบล้มเหลว', 'error');
+    }
+}
+
+async function deleteRoom(roomId) {
+    if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบห้อง ${roomId} และข้อมูลบิลทั้งหมดที่เกี่ยวข้อง? การกระทำนี้ไม่สามารถย้อนกลับได้!`)) return;
+    
+    showAlert('กำลังลบห้องและข้อมูลทั้งหมด...', 'info');
+    try {
+        // Delete from rooms
+        await db.ref(`rooms/${roomId}`).remove();
+
+        // Find and delete all bills associated with this room
+        const billsQuery = db.ref('electricityData').orderByChild('room').equalTo(roomId);
+        const billsSnapshot = await billsQuery.once('value');
+        if (billsSnapshot.exists()) {
+            const updates = {};
+            billsSnapshot.forEach(child => {
+                updates[child.key] = null;
+            });
+            await db.ref('electricityData').update(updates);
+        }
+        
+        // Optionally delete storage files (assessment, evidence)
+        // This is more complex, skipping for now to avoid prolonged deletion process
+
+        showAlert(`ลบห้อง ${roomId} เรียบร้อยแล้ว`, 'success');
+        closeModal('room-settings-modal');
+        renderHomeRoomCards();
+
+    } catch (error) {
+        console.error('Error deleting room:', error);
+        showAlert('เกิดข้อผิดพลาดในการลบห้อง', 'error');
+    }
+}
+
+async function generateInvoice(billKey) {
+    if (!billKey) {
+        showAlert('ไม่สามารถสร้างใบแจ้งหนี้ได้: ไม่พบข้อมูลบิล', 'warning');
+        return;
+    }
+
+    const invoiceModal = document.getElementById('invoice-modal');
+    const invoiceBody = document.getElementById('invoice-modal-body');
+    const downloadBtn = document.getElementById('download-invoice-btn');
+    if (!invoiceModal || !invoiceBody || !downloadBtn) return;
+
+    try {
+        // Show loading state
+        invoiceBody.innerHTML = `<div class="text-center p-8 text-slate-600"><i class="fas fa-spinner fa-spin text-3xl"></i><p class="mt-2">กำลังสร้างใบแจ้งหนี้...</p></div>`;
+        openModal('invoice-modal');
+
+        // 1. Fetch the specific bill
+        const billSnapshot = await db.ref(`electricityData/${billKey}`).once('value');
+        if (!billSnapshot.exists()) {
+            throw new Error('ไม่พบข้อมูลบิล');
+        }
+        const billData = billSnapshot.val();
+
+        // 2. Fetch the corresponding room settings
+        const roomSnapshot = await db.ref(`rooms/${billData.room}`).once('value');
+        let roomData;
+        
+        if (roomSnapshot.exists()) {
+            roomData = roomSnapshot.val();
+        } else {
+            // If no room settings exist (legacy room), create a fallback object
+            console.warn(`[Invoice] No settings found for room ${billData.room}. Using fallback data.`);
+            roomData = {
+                rent: 0, // Assume 0 rent if not set
+                addons: [],
+                tenantName: billData.name || 'N/A' // Use name from the bill as a fallback
+            };
+        }
+        
+        // 3. Calculate all costs
+        const rent = Number(roomData.rent || 0);
+        const electricTotal = Number(billData.total || 0);
+        const waterTotal = Number(billData.waterTotal || 0);
+        const addons = roomData.addons || [];
+        const addonsTotal = addons.reduce((acc, addon) => acc + Number(addon.price || 0), 0);
+        const grandTotal = rent + electricTotal + waterTotal + addonsTotal;
+
+        // 4. Build invoice HTML
+        invoiceBody.innerHTML = `
+            <div id="invoice-content" class="p-6 bg-white text-gray-800 font-sans">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">ใบแจ้งค่าใช้จ่าย</h1>
+                        <p class="text-gray-500">สำหรับห้อง: <span class="font-semibold text-gray-700">${billData.room}</span></p>
+                        <p class="text-gray-500">ผู้เช่า: <span class="font-semibold text-gray-700">${roomData.tenantName || 'N/A'}</span></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500">วันที่บันทึก: ${billData.date}</p>
+                        <p class="text-sm text-gray-500 font-bold text-red-600">กำหนดชำระ: ${billData.dueDate || 'ไม่มี'}</p>
+                    </div>
+                </div>
+
+                <div class="border-t border-b border-gray-200 py-4 mb-6">
+                    <div class="text-lg font-semibold mb-2 text-gray-700">สรุปค่าใช้จ่าย:</div>
+                    <table class="w-full">
+                        <tbody>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2">ค่าเช่าห้อง</td>
+                                <td class="text-right py-2">${rent.toLocaleString('en-US', { style: 'currency', currency: 'THB' })}</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2">ค่าไฟฟ้า (${billData.units} หน่วย)</td>
+                                <td class="text-right py-2">${electricTotal.toLocaleString('en-US', { style: 'currency', currency: 'THB' })}</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2">ค่าน้ำ (${billData.waterUnits || 0} หน่วย)</td>
+                                <td class="text-right py-2">${waterTotal.toLocaleString('en-US', { style: 'currency', currency: 'THB' })}</td>
+                            </tr>
+                            ${addons.map(addon => `
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-2">${addon.name}</td>
+                                    <td class="text-right py-2">${Number(addon.price || 0).toLocaleString('en-US', { style: 'currency', currency: 'THB' })}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="text-right">
+                    <p class="text-gray-600">ยอดรวม</p>
+                    <p class="text-3xl font-bold text-gray-900">${grandTotal.toLocaleString('en-US', { style: 'currency', currency: 'THB' })}</p>
+                </div>
+
+                <div class="mt-8 pt-4 border-t border-gray-200 text-center">
+                    <p class="text-gray-600 font-semibold">ขอขอบคุณ</p>
+                </div>
+            </div>
+        `;
+
+        // 5. Add event listener for download
+        downloadBtn.onclick = () => {
+             // Temporarily set body background to white for capture
+            document.body.style.backgroundColor = 'white';
+            const invoiceContent = document.getElementById('invoice-content');
+            
+            html2canvas(invoiceContent, {
+                 scale: 2, // Improve quality
+                 backgroundColor: '#ffffff'
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `invoice-room-${billData.room}-${billData.date.replace(/\//g, '-')}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                // Revert body background
+                document.body.style.backgroundColor = '';
+            });
+        };
+
+    } catch (error) {
+        console.error("Error generating invoice:", error);
+        invoiceBody.innerHTML = `<p class="text-red-500 text-center p-8">${error.message}</p>`;
     }
 }

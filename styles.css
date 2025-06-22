@@ -245,137 +245,106 @@ body {
     transform: rotate(360deg);
 }
 
-.card-header {
+.room-card.card-enter {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.room-card.card-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.room-card .card-content {
+    padding: 1.5rem;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #334155; /* slate-700 */
-}
-
-.card-title-group .room-number {
-    font-size: 2.25rem; /* text-4xl */
-    font-weight: 700;
-    color: #60A5FA; /* blue-400 */
-}
-
-.card-title-group .room-name {
-    font-size: 1.125rem; /* text-lg */
-    font-weight: 600;
-    color: #E2E8F0; /* slate-200 */
-    margin-top: 0.25rem;
-}
-
-.card-meta .meta-label {
-    font-size: 0.75rem; /* text-xs */
-    color: #94A3B8; /* slate-400 */
-}
-
-.card-meta .meta-value {
-    font-size: 0.875rem; /* text-sm */
-    color: #CBD5E1; /* slate-300 */
-}
-
-.card-body {
-    padding: 1rem 0;
-    flex-grow: 1;
-}
-
-.card-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0;
-}
-
-.card-section .label {
-    color: #94A3B8; /* slate-400 */
-    font-size: 0.875rem;
-}
-.card-section .value {
-    color: #F1F5F9; /* slate-100 */
-    font-weight: 600;
-}
-.card-section .value.electric { color: #FBBF24; /* amber-400 */ }
-.card-section .value.water { color: #38BDF8; /* sky-400 */ }
-
-
-.card-total {
+    flex-direction: column;
     text-align: center;
-    padding: 1.5rem 0;
-    margin: 1rem 0;
-    border-top: 1px solid #334155;
-    border-bottom: 1px solid #334155;
-    background: rgba(15, 23, 42, 0.5); /* slate-900 with opacity */
+    flex-grow: 1;
+    justify-content: center;
 }
-.card-total .total-label {
-    color: #94A3B8;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
-}
-.card-total .total-amount {
+
+.room-card .room-number {
     font-size: 2.5rem;
     font-weight: 800;
-    line-height: 1.2;
-    margin-top: 0.25rem;
-    background: -webkit-linear-gradient(45deg, #FBBF24, #F87171);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    transition: all 0.3s ease;
-}
-.card-total .total-amount.paid {
-    background: -webkit-linear-gradient(45deg, #4ADE80, #34D399); /* green */
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.card-total .total-amount.low {
-    background: -webkit-linear-gradient(45deg, #4ADE80, #A7F3D0); /* green */
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.card-total .total-amount.medium {
-    background: -webkit-linear-gradient(45deg, #FBBF24, #FDE68A); /* amber */
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.card-total .total-amount.high {
-    background: -webkit-linear-gradient(45deg, #F87171, #FECACA); /* red */
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--slate-100);
+    line-height: 1;
 }
 
-.card-footer {
-    padding-top: 1rem;
-    display: flex;
-    gap: 0.75rem;
+.room-card .room-name {
+    font-size: 1rem;
+    color: var(--slate-400);
+    margin-top: 0.5rem;
+    min-height: 1.5rem; /* Ensure consistent height */
 }
-.card-footer .btn {
-    flex: 1;
+
+.room-card .total-amount {
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-top: 1.25rem;
+}
+
+.room-card .payment-status-wrapper {
+    margin-top: 0.75rem;
+    min-height: 2rem; /* Ensure consistent height */
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .payment-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    margin-top: 0.75rem;
+    white-space: nowrap;
 }
+
 .payment-status.confirmed {
-    background-color: rgba(22, 163, 74, 0.1);
-    color: #4ADE80; /* green-400 */
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #10b981;
 }
 .payment-status.overdue {
     background-color: rgba(239, 68, 68, 0.1);
-    color: #F87171; /* red-400 */
+    color: #ef4444;
 }
 .payment-status.due-soon {
-    background-color: rgba(251, 191, 36, 0.1);
-    color: #FBBF24; /* amber-400 */
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
 }
+
+.room-card .card-footer {
+    padding: 0.75rem;
+    border-top: 1px solid var(--slate-700);
+    background-color: var(--slate-800);
+}
+
+.room-card .card-footer .btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.total-amount.paid {
+    color: #10b981; /* green-500 */
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+}
+.total-amount.high {
+    color: #ef4444; /* red-500 */
+}
+.total-amount.medium {
+    color: #f59e0b; /* amber-500 */
+}
+.total-amount.low {
+    color: var(--slate-200);
+}
+.value.electric { color: #facc15; } /* yellow-400 */
+.value.water { color: #38bdf8; } /* cyan-400 */
 
 /* === Form Styles === */
 .form-group {

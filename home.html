@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/th.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -337,6 +338,16 @@
                                         <label class="form-label" for="add-room-name">ชื่อผู้เช่า *</label>
                                         <input type="text" id="add-room-name" class="form-input" required>
                                     </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="form-group">
+                                            <label class="form-label" for="add-room-rent">ค่าเช่า *</label>
+                                            <input type="number" id="add-room-rent" class="form-input" required placeholder="เช่น 5000">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label" for="add-room-size">ขนาดห้อง</label>
+                                            <input type="text" id="add-room-size" class="form-input" placeholder="เช่น 30 ตร.ม.">
+                                        </div>
+                                    </div>
                                     <div class="form-group">
                                         <label class="form-label" for="add-room-date">วันที่บันทึก (DD/MM/YYYY) *</label>
                                         <input type="text" id="add-room-date" class="form-input" required placeholder="เช่น 25/12/2024">
@@ -400,6 +411,16 @@
                                     </div>
                                 </div>
                              </fieldset>
+
+                             <fieldset class="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
+                                <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2"><i class="fas fa-plus-circle text-green-300"></i>ค่าบริการเสริม</legend>
+                                <div id="add-ons-container" class="space-y-3 mt-4">
+                                    <!-- Add-on inputs will be dynamically added here -->
+                                </div>
+                                <button type="button" id="add-on-button" class="mt-4 w-full text-sm btn btn-secondary">
+                                    <i class="fas fa-plus"></i>เพิ่มบริการเสริม
+                                </button>
+                            </fieldset>
                         </div>
                     </div>
                 </div>
@@ -494,6 +515,56 @@
         </div>
     </div>
     
+    <!-- Invoice Modal -->
+    <div id="invoice-modal" class="modal-backdrop z-[56]">
+        <div class="modal-content max-w-md">
+            <div class="modal-header">
+                <h2 class="modal-title text-green-400"><i class="fas fa-file-invoice-dollar mr-3"></i>ใบแจ้งค่าใช้จ่าย</h2>
+                <button id="close-invoice-modal" class="modal-close-btn">&times;</button>
+            </div>
+            <div id="invoice-modal-body" class="modal-body bg-white text-slate-800">
+                <!-- Invoice content will be dynamically injected here -->
+            </div>
+            <div class="modal-footer">
+                <button id="download-invoice-btn" class="btn btn-success w-full">
+                    <i class="fas fa-download"></i> ดาวน์โหลดเป็นรูปภาพ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessment Form Modal -->
+    <div id="assessment-modal" class="modal-backdrop z-[55]">
+        <div class="modal-content max-w-lg">
+            <div class="modal-header">
+                <h2 class="modal-title text-purple-400"><i class="fas fa-file-signature mr-3"></i>จัดการใบประเมินอุปกรณ์</h2>
+                <button id="close-assessment-modal" class="modal-close-btn">&times;</button>
+            </div>
+            <div id="assessment-modal-body" class="modal-body">
+                <!-- Content will be injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Settings Modal -->
+    <div id="room-settings-modal" class="modal-backdrop z-[55]">
+        <div class="modal-content max-w-2xl">
+            <div class="modal-header">
+                <h2 class="modal-title text-purple-400">
+                    <i class="fas fa-cog mr-3"></i>ตั้งค่าห้อง <span id="settings-room-number" class="text-white"></span>
+                </h2>
+                <button id="close-settings-modal" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="room-settings-body">
+                <!-- Settings content will be loaded here -->
+                <div class="text-center p-8">
+                    <i class="fas fa-spinner fa-spin text-3xl text-slate-400"></i>
+                    <p class="mt-2 text-slate-400">กำลังโหลดข้อมูล...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bulk Data Entry Modal (Structure only, content populated by JS) -->
     <!-- The modal itself will be added dynamically by script.js -->
     
@@ -503,6 +574,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
         // Firebase configuration
         const firebaseConfig = {
