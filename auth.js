@@ -223,18 +223,15 @@ function requireAuth() {
 function showAlert(message, type = 'info') {
     const alertContainer = document.getElementById('alert-container');
     if (!alertContainer) {
-        // If no alert container exists, create one
-        const container = document.createElement('div');
-        container.id = 'alert-container';
-        container.className = 'fixed top-4 right-4 z-50';
-        document.body.appendChild(container);
+        console.error('Alert container not found!');
+        return;
     }
     
     const alertId = 'alert-' + Date.now();
     
     const alertDiv = document.createElement('div');
     alertDiv.id = alertId;
-    alertDiv.className = `mb-4 p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 ${
+    alertDiv.className = `alert-item mb-4 p-4 rounded-lg shadow-lg max-w-sm flex items-center justify-between ${
         type === 'success' ? 'bg-green-500 text-white' :
         type === 'error' ? 'bg-red-500 text-white' :
         type === 'warning' ? 'bg-yellow-500 text-white' :
@@ -242,163 +239,172 @@ function showAlert(message, type = 'info') {
     }`;
     
     alertDiv.innerHTML = `
-        <div class="flex items-center justify-between">
-            <div class="flex items-center">
-                <i class="fas ${
-                    type === 'success' ? 'fa-check-circle' :
-                    type === 'error' ? 'fa-exclamation-circle' :
-                    type === 'warning' ? 'fa-exclamation-triangle' :
-                    'fa-info-circle'
-                } mr-2"></i>
-                <span>${message}</span>
-            </div>
-            <button onclick="removeAlert('${alertId}')" class="ml-4 text-white/70 hover:text-white">
-                <i class="fas fa-times"></i>
-            </button>
+        <div class="flex items-center">
+             <i class="fas ${
+                type === 'success' ? 'fa-check-circle' :
+                type === 'error' ? 'fa-exclamation-circle' :
+                type === 'warning' ? 'fa-exclamation-triangle' :
+                'fa-info-circle'
+            } mr-3"></i>
+            <span>${message}</span>
         </div>
+        <button onclick="removeAlert('${alertId}')" class="ml-4 text-xl font-semibold leading-none">&times;</button>
     `;
     
-    document.getElementById('alert-container').appendChild(alertDiv);
-    
+    alertContainer.appendChild(alertDiv);
+
+    // Trigger the animation
+    setTimeout(() => {
+        alertDiv.classList.add('show');
+    }, 10);
+
     // Auto remove after 5 seconds
     setTimeout(() => {
         removeAlert(alertId);
     }, 5000);
 }
 
-// Remove alert
 function removeAlert(alertId) {
-    const alert = document.getElementById(alertId);
-    if (alert) {
-        alert.style.transform = 'translateX(100%)';
+    const alertElement = document.getElementById(alertId);
+    if (alertElement) {
+        alertElement.classList.remove('show');
         setTimeout(() => {
-            alert.remove();
-        }, 300);
+            alertElement.remove();
+        }, 500); // Wait for fade out animation
     }
 }
 
-// Show/hide loading
 function showLoading() {
-    const loadingOverlay = document.getElementById('loading-overlay');
-    if (loadingOverlay) {
-        loadingOverlay.classList.remove('hidden');
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.classList.remove('hidden');
+        setTimeout(() => overlay.classList.remove('opacity-0'), 10);
     }
 }
 
 function hideLoading() {
-    const loadingOverlay = document.getElementById('loading-overlay');
-    if (loadingOverlay) {
-        loadingOverlay.classList.add('hidden');
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.classList.add('opacity-0');
+        setTimeout(() => overlay.classList.add('hidden'), 300); // Corresponds to transition duration
     }
 }
 
-// Toggle password visibility
 function togglePasswordVisibility(inputId, buttonId) {
     const input = document.getElementById(inputId);
     const button = document.getElementById(buttonId);
     const icon = button.querySelector('i');
-    
+
     if (input.type === 'password') {
         input.type = 'text';
-        icon.className = 'fas fa-eye-slash';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
     } else {
         input.type = 'password';
-        icon.className = 'fas fa-eye';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
     }
 }
 
-// Switch between forms
-function showForm(formId) {
-    // Hide all forms
-    document.getElementById('login-form').classList.add('hidden');
-    document.getElementById('forgot-form').classList.add('hidden');
-    
-    // Show target form
-    document.getElementById(formId).classList.remove('hidden');
+function showForm(formToShowId, fromLeft = false) {
+    const forms = ['login-form', 'forgot-form'];
+    const container = document.querySelector('.form-container');
+
+    const formToShow = document.getElementById(formToShowId);
+
+    if (!formToShow || !container) return;
+
+    // Hide all other forms
+    forms.forEach(formId => {
+        if (formId !== formToShowId) {
+            const formToHide = document.getElementById(formId);
+            if (formToHide && !formToHide.classList.contains('hidden')) {
+                formToHide.classList.remove('active');
+                formToHide.classList.add('hidden');
+                if(fromLeft) {
+                    formToHide.classList.remove('left');
+                } else {
+                    formToHide.classList.add('left');
+                }
+            }
+        }
+    });
+
+    // Show the target form
+    formToShow.classList.remove('hidden');
+    if(fromLeft) {
+       formToShow.classList.add('left');
+    } else {
+       formToShow.classList.remove('left');
+    }
+
+    // Defer the active class to trigger transition
+    setTimeout(() => {
+        // Adjust container height
+        const formContent = formToShow.querySelector('.glass-effect');
+        if (formContent) {
+            container.style.minHeight = `${formContent.offsetHeight}px`;
+        }
+        formToShow.classList.add('active');
+    }, 50); // Small delay to allow browser to apply 'hidden' removal first
 }
 
-// Login function
-async function loginUser(email, password) {
+async function loginUser(email, password, rememberMe = false) {
+    showLoading();
     try {
-        showLoading();
+        const persistence = rememberMe ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION;
+        await auth.setPersistence(persistence);
+        
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
         const user = userCredential.user;
         
-        // Get user role
-        const userData = await getUserData(user.uid);
-        
         showAlert('เข้าสู่ระบบสำเร็จ!', 'success');
         
-        // Redirect based on role
+        // Wait a bit for the user to see the message before redirecting
         setTimeout(() => {
-            if (userData.role === 'admin') {
-                window.location.href = 'admin.html';
-            } else {
-                window.location.href = 'home.html';
-            }
+            window.location.href = 'home.html';
         }, 1000);
-        
+
     } catch (error) {
         console.error('Login error:', error);
         let errorMessage = 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
-        
-        switch (error.code) {
-            case 'auth/user-not-found':
-                errorMessage = 'ไม่พบผู้ใช้นี้ในระบบ';
-                break;
-            case 'auth/wrong-password':
-                errorMessage = 'รหัสผ่านไม่ถูกต้อง';
-                break;
-            case 'auth/invalid-email':
-                errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง';
-                break;
-            case 'auth/user-disabled':
-                errorMessage = 'บัญชีผู้ใช้ถูกระงับการใช้งาน';
-                break;
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            errorMessage = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
         }
-        
         showAlert(errorMessage, 'error');
     } finally {
         hideLoading();
     }
 }
 
-// Forgot password function
 async function forgotPassword(email) {
+    showLoading();
     try {
-        showLoading();
         await auth.sendPasswordResetEmail(email);
         showAlert('ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว', 'success');
-        showForm('login-form');
+        showForm('login-form', true); // Switch back to login form
     } catch (error) {
         console.error('Forgot password error:', error);
-        let errorMessage = 'เกิดข้อผิดพลาดในการส่งอีเมล';
-        
-        switch (error.code) {
-            case 'auth/user-not-found':
-                errorMessage = 'ไม่พบอีเมลนี้ในระบบ';
-                break;
-            case 'auth/invalid-email':
-                errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง';
-                break;
+        let errorMessage = 'เกิดข้อผิดพลาด';
+        if (error.code === 'auth/user-not-found') {
+            errorMessage = 'ไม่พบอีเมลนี้ในระบบ';
         }
-        
         showAlert(errorMessage, 'error');
     } finally {
         hideLoading();
     }
 }
 
-// Logout function
 async function logout() {
     try {
         await auth.signOut();
         currentUser = null;
         userRole = 'user';
+        console.log('Logout successful');
         window.location.href = 'login.html';
     } catch (error) {
-        console.error('Logout error:', error);
-        showAlert('เกิดข้อผิดพลาดในการออกจากระบบ', 'error');
+        console.error('Logout failed:', error);
+        showAlert('Logout failed: ' + error.message, 'error');
     }
 }
 
@@ -662,4 +668,85 @@ window.showAlert = showAlert;
 window.removeAlert = removeAlert;
 window.hasPermission = hasPermission;
 window.checkAuth = checkAuth;
-window.requireAuth = requireAuth; 
+window.requireAuth = requireAuth;
+
+// =================================================================================
+// MAIN SCRIPT EXECUTION
+// =================================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if we are on the login page by looking for the login form
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        const forgotForm = document.getElementById('forgotForm');
+        const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+        const backToLoginBtn = document.getElementById('backToLoginBtn');
+        const togglePasswordBtn = document.getElementById('togglePassword');
+
+        // Initial form setup to prevent blank page on load
+        const container = document.querySelector('.form-container');
+        const loginFormElement = document.getElementById('login-form');
+        if (container && loginFormElement) {
+            const formContent = loginFormElement.querySelector('.glass-effect');
+            if (formContent) {
+                 container.style.minHeight = `${formContent.offsetHeight}px`;
+            }
+        }
+
+        // Event Listeners
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            loginUser(email, password, rememberMe);
+        });
+
+        forgotForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgotEmail').value;
+            forgotPassword(email);
+        });
+
+        forgotPasswordBtn.addEventListener('click', () => {
+            showForm('forgot-form', false);
+        });
+
+        backToLoginBtn.addEventListener('click', () => {
+            showForm('login-form', true);
+        });
+        
+        if (togglePasswordBtn) {
+            togglePasswordBtn.addEventListener('click', () => {
+                togglePasswordVisibility('loginPassword', 'togglePassword');
+            });
+        }
+    }
+
+    // This part of the script runs on ALL pages
+    checkAuth().then(user => {
+        if (user) {
+            currentUser = user;
+            userRole = user.role;
+            window.currentUserData = user; // Make user data globally available
+            
+            // This function should be defined in your main script.js for other pages
+            if (typeof initializePageContent === 'function') {
+                initializePageContent();
+            }
+        } else {
+            // If not on login page and not authenticated, redirect
+            if (!window.location.pathname.includes('login.html') && !window.location.pathname.includes('create-admin.html')) {
+                requireAuth();
+            }
+        }
+    });
+
+    // Logout button for other pages
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+    }
+}); 

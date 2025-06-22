@@ -75,6 +75,37 @@
             border-color: #3498db;
             box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
         }
+        .form-container {
+            position: relative;
+            min-height: 450px; /* Adjust as needed */
+            transition: min-height 0.4s ease-in-out;
+        }
+        .form-wrapper {
+            position: absolute;
+            width: 100%;
+            transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+        }
+        .form-wrapper.hidden {
+            transform: translateX(100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .form-wrapper.hidden.left {
+            transform: translateX(-100%);
+        }
+        .form-wrapper.active {
+            transform: translateX(0);
+            opacity: 1;
+        }
+         #alert-container .alert-item {
+            transition: all 0.5s ease-in-out;
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        #alert-container .alert-item.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-dark via-primary to-secondary min-h-screen flex items-center justify-center p-4">
@@ -88,78 +119,80 @@
             <p class="text-white/70">ระบบคำนวณค่าไฟฟ้า</p>
         </div>
 
-        <!-- Login Form -->
-        <div id="login-form" class="glass-effect rounded-2xl p-8 shadow-2xl">
-            <h2 class="text-2xl font-bold text-white mb-6 text-center">เข้าสู่ระบบ</h2>
-            
-            <form id="loginForm" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-white/80 mb-2">อีเมล</label>
-                    <input type="email" id="loginEmail" required 
-                           class="form-input w-full px-4 py-3 rounded-lg text-white placeholder-white/50 focus:outline-none transition-all"
-                           placeholder="กรอกอีเมลของคุณ">
+        <div class="form-container">
+            <!-- Login Form -->
+            <div id="login-form" class="form-wrapper active">
+                <div class="glass-effect rounded-2xl p-8 shadow-2xl">
+                    <h2 class="text-2xl font-bold text-white mb-6 text-center">เข้าสู่ระบบ</h2>
+                    <form id="loginForm" class="space-y-4">
+                        <div class="relative">
+                            <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-white/50"></i>
+                            <input type="email" id="loginEmail" required 
+                                   class="form-input w-full pl-12 pr-4 py-3 rounded-lg text-white placeholder-white/50 focus:outline-none transition-all"
+                                   placeholder="กรอกอีเมลของคุณ">
+                        </div>
+                        
+                        <div class="relative">
+                           <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-white/50"></i>
+                            <input type="password" id="loginPassword" required 
+                                   class="form-input w-full pl-12 pr-12 py-3 rounded-lg text-white placeholder-white/50 focus:outline-none transition-all"
+                                   placeholder="กรอกรหัสผ่าน">
+                            <button type="button" id="togglePassword" 
+                                    class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="rememberMe" class="mr-2">
+                                <span class="text-sm text-white/70">จดจำฉัน</span>
+                            </label>
+                            <button type="button" id="forgotPasswordBtn" class="text-sm text-secondary hover:text-blue-300 transition-colors">
+                                ลืมรหัสผ่าน?
+                            </button>
+                        </div>
+                        
+                        <button type="submit" 
+                                class="w-full bg-secondary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105">
+                            <i class="fas fa-sign-in-alt mr-2"></i>เข้าสู่ระบบ
+                        </button>
+                    </form>
                 </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-white/80 mb-2">รหัสผ่าน</label>
-                    <div class="relative">
-                        <input type="password" id="loginPassword" required 
-                               class="form-input w-full px-4 py-3 pr-12 rounded-lg text-white placeholder-white/50 focus:outline-none transition-all"
-                               placeholder="กรอกรหัสผ่าน">
-                        <button type="button" id="togglePassword" 
-                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white">
-                            <i class="fas fa-eye"></i>
+            </div>
+
+            <!-- Forgot Password Form -->
+            <div id="forgot-form" class="form-wrapper hidden left">
+                 <div class="glass-effect rounded-2xl p-8 shadow-2xl">
+                    <h2 class="text-2xl font-bold text-white mb-6 text-center">ลืมรหัสผ่าน</h2>
+                    <form id="forgotForm" class="space-y-4">
+                        <div class="relative">
+                            <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-white/50"></i>
+                            <input type="email" id="forgotEmail" required 
+                                   class="form-input w-full pl-12 pr-4 py-3 rounded-lg text-white placeholder-white/50 focus:outline-none transition-all"
+                                   placeholder="กรอกอีเมลที่ใช้เข้าสู่ระบบ">
+                        </div>
+                        
+                        <button type="submit" 
+                                class="w-full bg-accent hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105">
+                            <i class="fas fa-paper-plane mr-2"></i>ส่งลิงก์รีเซ็ตรหัสผ่าน
+                        </button>
+                    </form>
+                    
+                    <div class="mt-6 text-center">
+                        <button type="button" id="backToLoginBtn" class="text-secondary hover:text-blue-300 font-medium transition-colors">
+                            <i class="fas fa-arrow-left mr-2"></i>กลับไปหน้าเข้าสู่ระบบ
                         </button>
                     </div>
                 </div>
-                
-                <div class="flex items-center justify-between">
-                    <label class="flex items-center">
-                        <input type="checkbox" id="rememberMe" class="mr-2">
-                        <span class="text-sm text-white/70">จดจำฉัน</span>
-                    </label>
-                    <button type="button" id="forgotPasswordBtn" class="text-sm text-secondary hover:text-blue-300 transition-colors">
-                        ลืมรหัสผ่าน?
-                    </button>
-                </div>
-                
-                <button type="submit" 
-                        class="w-full bg-secondary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105">
-                    <i class="fas fa-sign-in-alt mr-2"></i>เข้าสู่ระบบ
-                </button>
-            </form>
-        </div>
-
-        <!-- Forgot Password Form -->
-        <div id="forgot-form" class="glass-effect rounded-2xl p-8 shadow-2xl hidden">
-            <h2 class="text-2xl font-bold text-white mb-6 text-center">ลืมรหัสผ่าน</h2>
-            
-            <form id="forgotForm" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-white/80 mb-2">อีเมล</label>
-                    <input type="email" id="forgotEmail" required 
-                           class="form-input w-full px-4 py-3 rounded-lg text-white placeholder-white/50 focus:outline-none transition-all"
-                           placeholder="กรอกอีเมลที่ใช้เข้าสู่ระบบ">
-                </div>
-                
-                <button type="submit" 
-                        class="w-full bg-accent hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105">
-                    <i class="fas fa-paper-plane mr-2"></i>ส่งลิงก์รีเซ็ตรหัสผ่าน
-                </button>
-            </form>
-            
-            <div class="mt-6 text-center">
-                <button type="button" id="backToLoginBtn" class="text-secondary hover:text-blue-300 font-medium transition-colors">
-                    <i class="fas fa-arrow-left mr-2"></i>กลับไปหน้าเข้าสู่ระบบ
-                </button>
             </div>
         </div>
 
         <!-- Loading Overlay -->
-        <div id="loading-overlay" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-            <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
-                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-secondary"></div>
-                <span class="text-gray-700">กำลังดำเนินการ...</span>
+        <div id="loading-overlay" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden transition-opacity duration-300 opacity-0">
+            <div class="bg-white/90 backdrop-blur-sm rounded-lg p-6 flex items-center space-x-4 shadow-2xl">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <span class="text-lg font-medium text-gray-800">กำลังดำเนินการ...</span>
             </div>
         </div>
 
