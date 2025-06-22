@@ -662,4 +662,264 @@ window.showAlert = showAlert;
 window.removeAlert = removeAlert;
 window.hasPermission = hasPermission;
 window.checkAuth = checkAuth;
-window.requireAuth = requireAuth; 
+window.requireAuth = requireAuth;
+
+// A $( document ).ready() block.
+$( document ).ready(function() {
+    if(window.location.pathname.endsWith('login.html') || window.location.pathname.endsWith('admin.html')) {
+        const loginForm = document.getElementById('login-form');
+        if(loginForm) {
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const email = $('#email').val();
+                const password = $('#password').val();
+                const rememberMe = $('#rememberMe').prop('checked');
+                
+                auth.signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        // Signed in 
+                        var user = userCredential.user;
+                        
+                        if(rememberMe) {
+                            // Set persistence to 'local'
+                            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                                .then(() => {
+                                    // Existing and future Auth states are persisted in the current
+                                    // session only. Closing the window would clear any existing state even
+                                    // if a user forgets to sign out.
+                                    // ...
+                                    // New sign-in will be persisted with session persistence.
+                                    return auth.signInWithEmailAndPassword(email, password);
+                                });
+                        }
+                        
+                        // Check if user is admin
+                        const userRef = db.ref('users/' + user.uid);
+                        userRef.on('value', (snapshot) => {
+                            const userData = snapshot.val();
+                            if(userData && userData.role === 'admin') {
+                                if(window.location.pathname.endsWith('admin.html')) {
+                                     window.location.href = 'admin.html';
+                                } else {
+                                     window.location.href = 'home.html';
+                                }
+                            } else if (userData) { // it's a regular user
+                                if(window.location.pathname.endsWith('login.html')) {
+                                     window.location.href = 'home.html';
+                                } else {
+                                     auth.signOut();
+                                     alert('You are not authorized to view this page.');
+                                }
+                            } else { // No user data found
+                                auth.signOut();
+                                alert('No user data found for this account.');
+                            }
+                        });
+                    })
+                    .catch((error) => {
+                        var errorCode = error.code;
+                        var errorMessage = error.message;
+                        alert(errorMessage);
+                    });
+            });
+        }
+    }
+    
+    // Check auth state
+    checkAuth();
+});
+
+function checkAuth() {
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            // User is signed in.
+            // You can get user info here.
+            // For example, on pages that need to display user info.
+             if(window.location.pathname.includes('login.html') || window.location.pathname.includes('admin.html')){
+                 // Already on login/admin page, might want to redirect to home if logged in
+             }
+        } else {
+            // User is signed out.
+            const protected_pages = ['home.html', 'index.html', 'profile.html'];
+            if(protected_pages.some(page => window.location.pathname.includes(page))) {
+                window.location.href = 'login.html';
+            }
+        }
+    });
+}
+
+function logout() {
+    auth.signOut().then(() => {
+        // Sign-out successful.
+        window.location.href = 'login.html';
+    }).catch((error) => {
+        // An error happened.
+        console.error(error);
+    });
+}
+
+// This is the content of auth.js I need to add logging and toggle to
+async function logSystemEvent(eventName, eventData = {}) {
+    if (!db) {
+        console.error("Database not initialized for logging.");
+        return;
+    }
+    try {
+        const log = {
+            event: eventName,
+            timestamp: new Date().toISOString(),
+            ...eventData
+        };
+        // Add user info if available
+        if (auth.currentUser) {
+            log.uid = auth.currentUser.uid;
+            log.email = auth.currentUser.email;
+        } else if (eventData.email) {
+            // For login attempts before user is set
+            log.email = eventData.email;
+        }
+        await db.ref('logs').push(log);
+    } catch (error) {
+        console.error('Error logging event:', error);
+    }
+}
+
+// Event listener for pages that require authentication
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        const errorMessageDiv = document.getElementById('login-error-message');
+
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginButton = document.getElementById('login-button');
+            const originalButtonHtml = loginButton.innerHTML;
+            
+            loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังตรวจสอบ...';
+            loginButton.disabled = true;
+            errorMessageDiv.classList.add('hidden');
+
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+            .then(() => {
+                return auth.signInWithEmailAndPassword(email, password);
+            })
+            .then((userCredential) => {
+                logSystemEvent('login_success', { email: userCredential.user.email, uid: userCredential.user.uid });
+                window.location.href = 'home.html';
+            })
+            .catch((error) => {
+                logSystemEvent('login_failure', { email: email, error: { code: error.code, message: error.message } });
+                let friendlyMessage = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+                if (error.code === 'auth/user-not-found') {
+                    friendlyMessage = 'ไม่พบผู้ใช้งานด้วยอีเมลนี้';
+                } else if (error.code === 'auth/wrong-password') {
+                    friendlyMessage = 'รหัสผ่านไม่ถูกต้อง';
+                }
+                errorMessageDiv.textContent = friendlyMessage;
+                errorMessageDiv.classList.remove('hidden');
+            })
+            .finally(() => {
+                loginButton.innerHTML = originalButtonHtml;
+                loginButton.disabled = false;
+            });
+        });
+
+        // Password toggle logic
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('toggleIcon');
+        if (togglePassword) {
+            togglePassword.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                toggleIcon.classList.toggle('fa-eye');
+                toggleIcon.classList.toggle('fa-eye-slash');
+            });
+        }
+    }
+
+    const authContainer = document.getElementById('auth-container');
+    if (authContainer && document.body.classList.contains('requires-auth')) {
+        checkAuth();
+    }
+});
+
+function checkAuth() {
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // User is signed in.
+            window.currentUser = user;
+            getUserData(user.uid).then(userData => {
+                window.currentUserData = userData;
+                window.currentUserRole = userData.role || 'user'; 
+                updateAuthUI(user, userData);
+                
+                // Initialize page-specific content that depends on user auth
+                if (typeof initializePageContent === 'function') {
+                    initializePageContent();
+                }
+            });
+        } else {
+            // User is signed out.
+            window.currentUser = null;
+            if (document.body.classList.contains('requires-auth')) {
+                window.location.href = 'login.html';
+            }
+        }
+    });
+}
+
+async function getUserData(uid) {
+    try {
+        const snapshot = await db.ref(`users/${uid}`).once('value');
+        return snapshot.val() || {};
+    } catch (error) {
+        console.error("Error fetching user data:", error);
+        return {};
+    }
+}
+
+function updateAuthUI(user, userData = {}) {
+    const authContainer = document.getElementById('auth-container');
+    if (authContainer) {
+        authContainer.innerHTML = `
+            <span class="text-white">สวัสดี, ${userData.name || user.email}</span>
+            <button onclick="logout()" class="btn btn-danger">
+                <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+            </button>
+        `;
+    }
+}
+
+function logout() {
+    if (auth.currentUser) {
+      logSystemEvent('logout', { email: auth.currentUser.email, uid: auth.currentUser.uid });
+    }
+    auth.signOut().then(() => {
+        window.location.href = 'login.html';
+    }).catch((error) => {
+        console.error('Logout Error:', error);
+    });
+}
+
+function getFriendlyErrorMessage(error) {
+    switch (error.code) {
+        case 'auth/user-not-found':
+            return 'ไม่พบผู้ใช้งานด้วยอีเมลนี้ กรุณาตรวจสอบอีกครั้ง';
+        case 'auth/invalid-email':
+            return 'รูปแบบอีเมลไม่ถูกต้อง';
+        case 'auth/missing-email':
+             return 'กรุณากรอกอีเมลของคุณ';
+        case 'auth/network-request-failed':
+            return 'การเชื่อมต่อขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่';
+        default:
+            console.error('Unhandled auth error:', error);
+            return 'เกิดข้อผิดพลาด ไม่สามารถส่งอีเมลได้ในขณะนี้ อาจเกิดจากปัญหาการตั้งค่าหรือเครือข่าย';
+    }
+}
+
+function logActivity(action, details = {}) {
+    // Implementation of logActivity function
+} 

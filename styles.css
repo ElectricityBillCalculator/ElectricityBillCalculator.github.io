@@ -434,9 +434,9 @@ body.modal-open {
     transition: all 0.2s ease;
 }
 .form-input:focus {
+    border-color: #3b82f6; /* border-blue-500 */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 /* === Responsive Grid for Cards === */
@@ -464,7 +464,7 @@ body.modal-open {
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(20px);
     }
     to {
         opacity: 1;
@@ -474,8 +474,8 @@ body.modal-open {
 
 /* Animation Utilities */
 .animate-on-load {
-    animation-name: fadeInUp;
-    animation-duration: 0.8s;
+    animation: fadeInUp 0.6s ease-out forwards;
+    opacity: 0;
 }
 
 .room-name .edit-name-btn {
@@ -493,4 +493,19 @@ body.modal-open {
 .room-name .edit-name-btn:hover {
     color: var(--slate-300);
     background-color: var(--slate-700);
+}
+
+/* Add a specific style for the password toggle button if needed */
+.password-toggle-btn {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8; /* slate-400 */
+    cursor: pointer;
+    transition: color 0.2s ease-in-out;
+}
+
+.password-toggle-btn:hover {
+    color: #fff;
 } 
