@@ -471,16 +471,16 @@ async function renderHistoryTable(room) {
 
             return `
             <tr class="hover:bg-white/5 transition-colors">
-                <td data-label="วันที่" class="py-3 px-3 text-center border-r border-slate-700 align-middle">${bill.date || ''}</td>
+                <td class="py-3 px-3 text-center border-r border-slate-700 align-middle">${bill.date || ''}</td>
                 <!-- Electricity Data -->
-                <td data-label="หน่วยไฟ" class="py-3 px-3 text-center text-yellow-400 font-semibold align-middle">${bill.units || '-'}</td>
-                <td data-label="เรทไฟ" class="py-3 px-3 text-center align-middle">${Number(bill.rate || 0).toFixed(2)}</td>
-                <td data-label="ค่าไฟห้อง" class="py-3 px-3 text-center text-green-400 font-bold border-r border-slate-700 align-middle">${Number(bill.total || 0).toLocaleString()}</td>
+                <td class="py-3 px-3 text-center text-yellow-400 font-semibold align-middle">${bill.units || '-'}</td>
+                <td class="py-3 px-3 text-center align-middle">${Number(bill.rate || 0).toFixed(2)}</td>
+                <td class="py-3 px-3 text-center text-green-400 font-bold border-r border-slate-700 align-middle">${Number(bill.total || 0).toLocaleString()}</td>
                 <!-- Water Data -->
-                <td data-label="หน่วยน้ำ" class="py-3 px-3 text-center text-cyan-400 font-semibold align-middle">${bill.waterUnits || '-'}</td>
-                <td data-label="เรทน้ำ" class="py-3 px-3 text-center align-middle">${Number(bill.waterRate || 0).toFixed(2)}</td>
-                <td data-label="ค่าน้ำห้อง" class="py-3 px-3 text-center text-sky-400 font-bold border-r border-slate-700 align-middle">${Number(bill.waterTotal || 0).toLocaleString()}</td>
-                <td data-label="จัดการ" class="py-3 px-3 text-center align-middle">
+                <td class="py-3 px-3 text-center text-cyan-400 font-semibold align-middle">${bill.waterUnits || '-'}</td>
+                <td class="py-3 px-3 text-center align-middle">${Number(bill.waterRate || 0).toFixed(2)}</td>
+                <td class="py-3 px-3 text-center text-sky-400 font-bold border-r border-slate-700 align-middle">${Number(bill.waterTotal || 0).toLocaleString()}</td>
+                <td class="py-3 px-3 text-center align-middle">
                     ${actionsHtml}
                 </td>
             </tr>
