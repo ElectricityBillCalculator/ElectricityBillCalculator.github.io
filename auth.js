@@ -16,7 +16,7 @@ const ROLE_PERMISSIONS = {
     'admin': {
         canManageUsers: true,
         canManageRoles: true,
-        canViewAllRooms: true,
+        canViewAllRooms: false, // Admin can only see rooms in their building
         canEditAllBills: true,
         canDeleteBills: true,
         canUploadEvidence: true,
@@ -24,8 +24,9 @@ const ROLE_PERMISSIONS = {
         canAddNewBills: true,
         canGenerateQRCode: true,
         canViewHistory: true,
-        canManageTenants: true, // Admin can manage tenants for level1 users
-        canConfirmPayment: true, // Admin can confirm payments for all rooms
+        canManageTenants: true, // Admin can manage tenants for their building
+        canConfirmPayment: true, // Admin can confirm payments for their building
+        canManageBuildings: false, // Admin cannot manage other buildings
     },
     'user': { // General user, might not have access to specific room data unless explicitly granted
         canManageUsers: false,
@@ -40,6 +41,7 @@ const ROLE_PERMISSIONS = {
         canViewHistory: true, // Can view their own history if any
         canManageTenants: false,
         canConfirmPayment: false, // General users cannot confirm payments
+        canManageBuildings: false,
     },
     '1': { // Level 1 Owner (เจ้าของห้อง)
         canManageUsers: false, // Cannot manage general users, but can manage their tenants
@@ -54,6 +56,7 @@ const ROLE_PERMISSIONS = {
         canViewHistory: true, // For their managed rooms
         canManageTenants: true, // Key permission for Level 1 Owner
         canConfirmPayment: true, // Room owners can confirm payments for their managed rooms
+        canManageBuildings: false,
     },
     'level1_tenant': { // ลูกบ้าน
         canManageUsers: false,
@@ -68,6 +71,7 @@ const ROLE_PERMISSIONS = {
         canViewHistory: true, // For their accessible rooms
         canManageTenants: false,
         canConfirmPayment: false, // Tenants cannot confirm payments
+        canManageBuildings: false,
     },
     '2': { // Level 2 (อาจจะยังคงเดิมหรือปรับเปลี่ยนตามความเหมาะสม)
         canManageUsers: false,
@@ -82,6 +86,7 @@ const ROLE_PERMISSIONS = {
         canViewHistory: true,  // Potentially for specific cases
         canManageTenants: false,
         canConfirmPayment: false, // Level 2 cannot confirm payments
+        canManageBuildings: false,
     }
 };
 
@@ -152,6 +157,14 @@ function hasPermission(permission, roomToCheck = null) {
 
     // Admin role has all permissions unconditionally.
     if (userRole === 'admin') {
+        // For admin, check if they have access to the specific building
+        if (roomToCheck && currentUserData.buildingCode) {
+            // Admin can only access rooms in their building
+            // Room codes should start with building code (e.g., A101 for building A)
+            if (!roomToCheck.startsWith(currentUserData.buildingCode)) {
+                return false;
+            }
+        }
         return true;
     }
 
@@ -198,15 +211,14 @@ function hasPermission(permission, roomToCheck = null) {
     } else {
         // If no roomToCheck, and it's a permission that implies viewing multiple rooms
         if (userRole === '1' || userRole === 'level1_tenant') {
-            if (permission === 'canViewAllRooms' || permission === 'canEditAllBills' || permission === 'canDeleteBills') {
-                 // These roles should not have "AllRooms" access unless specifically viewing their own/allowed list.
-                 // This prevents them from seeing the "All Rooms" view on the home page if not intended.
-                return false;
+            // These roles have limited scope, so some permissions might be restricted
+            if (permission === 'canViewAllRooms') {
+                return false; // They can't view ALL rooms, only their managed/accessible ones
             }
         }
     }
 
-    return true; // If all checks pass
+    return true;
 }
 
 
@@ -605,11 +617,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (user) {
                 // User is already logged in, redirect
                 const { role } = await getUserData(user.uid);
-                if (role === 'admin') {
-                    window.location.href = 'admin.html';
-                } else {
-                    window.location.href = 'home.html';
-                }
+                // Admin can access both home and admin pages, default to home
+                window.location.href = 'home.html';
             }
         });
     }

@@ -233,6 +233,9 @@
                      <button id="btn-add-room" class="btn btn-primary">
                         <i class="fas fa-plus-circle"></i>เพิ่มห้องใหม่
                 </button>
+                    <button id="btn-upload-csv" class="btn btn-success">
+                        <i class="fas fa-file-csv"></i>อัพโหลด CSV
+                    </button>
                     <!-- Bulk add button will be added here by script.js -->
                 </div>
             </div>
@@ -568,6 +571,72 @@
     <!-- Bulk Data Entry Modal (Structure only, content populated by JS) -->
     <!-- The modal itself will be added dynamically by script.js -->
     
+    <!-- CSV Upload Modal -->
+    <div id="csv-upload-modal" class="modal-backdrop z-[57]">
+        <div class="modal-content max-w-2xl">
+            <div class="modal-header">
+                <h2 class="modal-title text-green-400"><i class="fas fa-file-csv mr-3"></i>อัพโหลดข้อมูลห้องจากไฟล์ CSV</h2>
+                <button id="close-csv-modal" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="space-y-6">
+                    <!-- File Upload Section -->
+                    <fieldset class="bg-slate-700/50 rounded-xl p-5">
+                        <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2">
+                            <i class="fas fa-upload text-blue-300"></i>เลือกไฟล์ CSV
+                        </legend>
+                        <div class="mt-4">
+                            <div id="csv-dropzone" class="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-slate-400 mb-4"></i>
+                                <p class="text-slate-300 mb-2">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</p>
+                                <p class="text-slate-400 text-sm">รองรับไฟล์ .csv เท่านั้น</p>
+                                <input type="file" id="csv-file-input" accept=".csv" class="hidden">
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Template Download Section -->
+                    <fieldset class="bg-slate-700/50 rounded-xl p-5">
+                        <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2">
+                            <i class="fas fa-download text-yellow-300"></i>ดาวน์โหลดเทมเพลต
+                        </legend>
+                        <div class="mt-4 space-y-3">
+                            <p class="text-slate-300">ดาวน์โหลดไฟล์เทมเพลตเพื่อดูรูปแบบข้อมูลที่ถูกต้อง:</p>
+                            <button type="button" id="download-csv-template" class="btn btn-secondary w-full">
+                                <i class="fas fa-download"></i>ดาวน์โหลดเทมเพลต CSV
+                            </button>
+                            <div class="text-xs text-slate-400 space-y-1">
+                                <p><strong>คอลัมน์ที่จำเป็น:</strong> room, name, date, current, previous, rate</p>
+                                <p><strong>คอลัมน์เพิ่มเติม:</strong> dueDate, waterCurrent, waterPrevious, waterRate, rent, size</p>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Preview Section -->
+                    <fieldset id="csv-preview-section" class="bg-slate-700/50 rounded-xl p-5 hidden">
+                        <legend class="font-semibold text-lg text-white px-2 flex items-center gap-2">
+                            <i class="fas fa-eye text-purple-300"></i>ตัวอย่างข้อมูล
+                        </legend>
+                        <div class="mt-4">
+                            <div id="csv-preview" class="bg-slate-800 rounded-lg p-4 max-h-60 overflow-y-auto">
+                                <!-- Preview content will be populated here -->
+                            </div>
+                            <div id="csv-validation" class="mt-3 text-sm">
+                                <!-- Validation messages will be shown here -->
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="cancel-csv-upload" class="btn btn-secondary">ยกเลิก</button>
+                <button type="button" id="process-csv-upload" class="btn btn-success" disabled>
+                    <i class="fas fa-upload"></i>อัพโหลดข้อมูล
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
