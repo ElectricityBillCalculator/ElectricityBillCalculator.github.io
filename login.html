@@ -3,67 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เข้าสู่ระบบ | ระบบจัดการหอพัก</title>
+    <title>เข้าสู่ระบบ | Electricity Bill Calculator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        body {
-            font-family: 'Kanit', sans-serif;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        }
-        .form-container {
-            background-color: rgba(30, 41, 59, 0.6);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(71, 85, 105, 0.5);
-        }
-    </style>
-</head>
-<body class="flex items-center justify-center min-h-screen">
-    <div class="w-full max-w-md mx-auto p-4">
-        <header class="text-center mb-8 animate-on-load" style="animation-delay: 100ms;">
-            <div class="inline-block bg-yellow-400/20 p-4 rounded-full mb-4">
-                <i class="fas fa-bolt text-3xl text-yellow-400"></i>
-            </div>
-            <h1 class="text-3xl font-bold text-white">ระบบจัดการหอพัก</h1>
-            <p class="text-slate-400 mt-2">Dormitory Management System</p>
-        </header>
-
-        <main class="animate-on-load" style="animation-delay: 200ms;">
-            <div class="form-container p-8 rounded-2xl shadow-2xl">
-                <h2 class="text-2xl font-semibold text-white text-center mb-1">เข้าสู่ระบบ</h2>
-                <p class="text-slate-400 text-center mb-6">กรุณาใส่อีเมลและรหัสผ่านของคุณ</p>
-                <form id="login-form">
-                    <div class="mb-4 form-group">
-                        <label for="email" class="form-label">อีเมล</label>
-                        <input type="email" id="email" placeholder="อีเมล" class="form-input" required>
-                    </div>
-                    <div class="mb-4 form-group relative">
-                        <label for="password" class="form-label">รหัสผ่าน</label>
-                        <input type="password" id="password" placeholder="รหัสผ่าน" class="form-input pr-10" required>
-                        <button type="button" id="togglePassword" class="absolute right-3 top-9 text-slate-400 hover:text-white transition-colors">
-                            <i class="fas fa-eye" id="toggleIcon"></i>
-                        </button>
-                    </div>
-                     <div class="flex justify-end items-center mb-6">
-                        <a href="forgot-password.html" class="text-sm text-blue-400 hover:text-blue-300 transition">ลืมรหัสผ่าน?</a>
-                    </div>
-                    <div id="login-error-message" class="text-red-400 text-sm text-center mb-4 hidden"></div>
-                    <button type="submit" id="login-button" class="btn btn-primary w-full text-lg">
-                        <i class="fas fa-sign-in-alt mr-2"></i>เข้าสู่ระบบ
-                    </button>
-                </form>
-            </div>
-        </main>
-    </div>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     
-    <script src="auth.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyC2DvQt-VXfeEeip9thWXLKnstHmyx_eOk",
+            authDomain: "electricity-bill-calcula-ea4a2.firebaseapp.com",
+            databaseURL: "https://electricity-bill-calcula-ea4a2-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "electricity-bill-calcula-ea4a2",
+            storageBucket: "electricity-bill-calcula-ea4a2.firebasestorage.app",
+            messagingSenderId: "79440126022",
+            appId: "1:79440126022:web:7ffbc16c6661bc75dc6a47",
+            measurementId: "G-7JD6H3Q0PM"
+        };
+        let db, auth;
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.database();
+            auth = firebase.auth();
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+        }
+    </script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2c3e50',
+                        secondary: '#3498db',
+                        accent: '#e74c3c',
+                        success: '#27ae60',
+                        dark: '#1a2a3a',
+                    },
+                    fontFamily: {
+                        kanit: ['Kanit', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .form-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+        }
+        .form-input:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-dark via-primary to-secondary min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Logo/Header -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-4">
+                <i class="fas fa-bolt text-3xl text-yellow-400"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">Electricity Bill Calculator</h1>
+            <p class="text-white/70">ระบบคำนวณค่าไฟฟ้า</p>
+        </div>
 
+        <!-- Login Form -->
+        <div id="login-form" class="glass-effect rounded-2xl p-8 shadow-2xl">
+            <h2 class="text-2xl font-bold text-white mb-6 text-center">เข้าสู่ระบบ</h2>
+            
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-2">อีเมล</label>
+                    <input type="email" id="loginEmail" required 
+                           class="form-input w-full px-4 py-3 rounded-lg text-white placeholder-white/50 focus:outline-none transition-all"
+                           placeholder="กรอกอีเมลของคุณ">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-2">รหัสผ่าน</label>
+                    <div class="relative">
+                        <input type="password" id="loginPassword" required 
+                               class="form-input w-full px-4 py-3 pr-12 rounded-lg text-white placeholder-white/50 focus:outline-none transition-all"
+                               placeholder="กรอกรหัสผ่าน">
+                        <button type="button" id="togglePassword" 
+                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="rememberMe" class="mr-2">
+                        <span class="text-sm text-white/70">จดจำฉัน</span>
+                    </label>
+                    <button type="button" id="forgotPasswordBtn" class="text-sm text-secondary hover:text-blue-300 transition-colors">
+                        ลืมรหัสผ่าน?
+                    </button>
+                </div>
+                
+                <button type="submit" 
+                        class="w-full bg-secondary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-sign-in-alt mr-2"></i>เข้าสู่ระบบ
+                </button>
+            </form>
+        </div>
+
+        <!-- Forgot Password Form -->
+        <div id="forgot-form" class="glass-effect rounded-2xl p-8 shadow-2xl hidden">
+            <h2 class="text-2xl font-bold text-white mb-6 text-center">ลืมรหัสผ่าน</h2>
+            
+            <form id="forgotForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-2">อีเมล</label>
+                    <input type="email" id="forgotEmail" required 
+                           class="form-input w-full px-4 py-3 rounded-lg text-white placeholder-white/50 focus:outline-none transition-all"
+                           placeholder="กรอกอีเมลที่ใช้เข้าสู่ระบบ">
+                </div>
+                
+                <button type="submit" 
+                        class="w-full bg-accent hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-paper-plane mr-2"></i>ส่งลิงก์รีเซ็ตรหัสผ่าน
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <button type="button" id="backToLoginBtn" class="text-secondary hover:text-blue-300 font-medium transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>กลับไปหน้าเข้าสู่ระบบ
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-secondary"></div>
+                <span class="text-gray-700">กำลังดำเนินการ...</span>
+            </div>
+        </div>
+
+        <!-- Alert Messages -->
+        <div id="alert-container" class="fixed top-4 right-4 z-50"></div>
+    </div>
+
+    <script src="auth.js"></script>
 </body>
 </html> 
