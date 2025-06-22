@@ -44,6 +44,10 @@ body {
 
 
 /* === Modal Base Styles & Animations === */
+body.modal-open {
+    overflow: hidden;
+}
+
 .modal-backdrop {
     position: fixed;
     top: 0;
@@ -60,6 +64,7 @@ body {
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
+    overflow-y: auto;
 }
 
 .modal-backdrop.active {
@@ -72,13 +77,16 @@ body {
     border-radius: 1.5rem; /* 2xl */
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     width: 100%;
+    max-width: 90vw;
     max-height: 90vh;
+    min-height: 200px;
     display: flex;
     flex-direction: column;
     border: 1px solid #334155; /* slate-700 */
     transform: scale(0.95) translateY(20px);
     opacity: 0;
     transition: transform 0.3s ease, opacity 0.3s ease;
+    margin: auto;
 }
 
 .modal-backdrop.active .modal-content {
@@ -91,12 +99,15 @@ body {
     border-bottom: 1px solid #334155; /* slate-700 */
     position: relative;
     text-align: center;
+    flex-shrink: 0;
 }
 
 .modal-title {
     font-size: 1.5rem; /* 2xl */
     font-weight: 700;
     color: #fff;
+    margin: 0;
+    padding-right: 3rem; /* Space for close button */
 }
 
 .modal-close-btn {
@@ -113,6 +124,8 @@ body {
     justify-content: center;
     font-size: 1.5rem;
     transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
 }
 
 .modal-close-btn:hover {
@@ -125,6 +138,7 @@ body {
     padding: 1.5rem;
     overflow-y: auto;
     flex-grow: 1;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-footer {
@@ -133,6 +147,43 @@ body {
     background-color: #1e293b; /* slate-800 */
     border-bottom-left-radius: 1.5rem;
     border-bottom-right-radius: 1.5rem;
+    flex-shrink: 0;
+}
+
+/* Responsive modal adjustments */
+@media (max-width: 768px) {
+    .modal-backdrop {
+        padding: 0.5rem;
+    }
+    
+    .modal-content {
+        max-width: 95vw;
+        max-height: 95vh;
+        border-radius: 1rem;
+    }
+    
+    .modal-header {
+        padding: 1rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .modal-footer {
+        padding: 1rem;
+    }
+    
+    .modal-title {
+        font-size: 1.25rem;
+        padding-right: 2.5rem;
+    }
+    
+    .modal-close-btn {
+        width: 2rem;
+        height: 2rem;
+        font-size: 1.25rem;
+    }
 }
 
 /* === Button Styles === */

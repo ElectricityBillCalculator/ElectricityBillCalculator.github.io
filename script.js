@@ -76,6 +76,26 @@ function initializePageContent() {
         document.getElementById('close-tenant-modal')?.addEventListener('click', () => closeModal('add-edit-tenant-modal'));
         document.getElementById('confirm-modal-cancel-btn')?.addEventListener('click', () => closeModal('confirm-modal'));
         
+        // FIX: Add event listener for add room button
+        document.getElementById('btn-add-room')?.addEventListener('click', () => openModal('add-room-modal'));
+        
+        // FIX: Add event listener for add room form
+        document.getElementById('add-room-form')?.addEventListener('submit', handleAddRoom);
+        
+        // FIX: Add event listener for add-on button
+        document.getElementById('add-on-button')?.addEventListener('click', addAddonInput);
+        
+        // FIX: Initialize Level 1 Owner interface
+        if (typeof initializeLevel1OwnerInterface === 'function') {
+            initializeLevel1OwnerInterface();
+        } else {
+            // For non-level 1 users, ensure my-rooms-content is visible
+            const myRoomsContent = document.getElementById('my-rooms-content');
+            if (myRoomsContent) {
+                myRoomsContent.classList.remove('hidden');
+            }
+        }
+        
     } else if (document.getElementById('history-section')) {
         // This is the index.html page for a specific room
         const urlParams = new URLSearchParams(window.location.search);
@@ -1116,26 +1136,34 @@ function getDueDateInfo(dueDateStr) {
 // --- Modal Controls ---
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (!modal) return;
+    if (!modal) {
+        console.error(`Modal with id '${modalId}' not found`);
+        return;
+    }
 
+    // Remove active class to trigger transition
     modal.classList.remove('active');
     
+    // Wait for transition to complete before hiding
     const onTransitionEnd = () => {
         modal.style.display = 'none';
-        document.body.classList.remove('modal-open');
+        modal.style.visibility = 'hidden';
         modal.removeEventListener('transitionend', onTransitionEnd);
+        
+        // Re-enable body scroll
+        document.body.classList.remove('modal-open');
     };
     
     modal.addEventListener('transitionend', onTransitionEnd);
-
-    // For bulk modal, remove it from DOM after closing
-    if (modalId === 'bulk-data-modal' || modalId === 'confirm-modal') {
-         setTimeout(() => {
-            if (!modal.classList.contains('active')) {
-                modal.remove();
-            }
-        }, 500); // A bit longer than transition
-    }
+    
+    // Fallback: if transition doesn't fire, hide after a delay
+    setTimeout(() => {
+        if (modal.style.display !== 'none') {
+            modal.style.display = 'none';
+            modal.style.visibility = 'hidden';
+            document.body.classList.remove('modal-open');
+        }
+    }, 300);
 }
 
 function viewEvidence(url, fileName = 'หลักฐานการชำระเงิน') {
@@ -3196,10 +3224,18 @@ async function handleBulkDataEntry(event) {
 // --- Modal Control Functions with Animation ---
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (!modal) return;
+    if (!modal) {
+        console.error(`Modal with id '${modalId}' not found`);
+        return;
+    }
 
+    // Prevent body scroll when modal is open
     document.body.classList.add('modal-open');
+    
+    // Show modal
     modal.style.display = 'flex';
+    modal.style.visibility = 'visible';
+    
     // Use setTimeout to allow the display property to apply before adding the class for transition
     setTimeout(() => {
         modal.classList.add('active');
@@ -3208,7 +3244,39 @@ function openModal(modalId) {
         if (modalId === 'add-room-modal') {
             initializeFlatpickr();
         }
-    }, 10); 
+    }, 10);
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+        console.error(`Modal with id '${modalId}' not found`);
+        return;
+    }
+
+    // Remove active class to trigger transition
+    modal.classList.remove('active');
+    
+    // Wait for transition to complete before hiding
+    const onTransitionEnd = () => {
+        modal.style.display = 'none';
+        modal.style.visibility = 'hidden';
+        modal.removeEventListener('transitionend', onTransitionEnd);
+        
+        // Re-enable body scroll
+        document.body.classList.remove('modal-open');
+    };
+    
+    modal.addEventListener('transitionend', onTransitionEnd);
+    
+    // Fallback: if transition doesn't fire, hide after a delay
+    setTimeout(() => {
+        if (modal.style.display !== 'none') {
+            modal.style.display = 'none';
+            modal.style.visibility = 'hidden';
+            document.body.classList.remove('modal-open');
+        }
+    }, 300);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -4474,5 +4542,21 @@ async function saveAssessmentData(roomId, roomData) {
     } catch (error) {
         console.error('Error saving assessment data:', error);
         showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+    }
+}
+
+// Function to add a new add-on input field
+function addAddonInput() {
+    const container = document.getElementById('add-ons-container');
+    if (container) {
+        const newAddon = document.createElement('div');
+        newAddon.className = 'flex items-center gap-2 animate-on-load';
+        newAddon.style.animation = 'fadeInUp 0.3s ease-out forwards';
+        newAddon.innerHTML = `
+            <input type="text" class="form-input flex-grow addon-name-input" placeholder="ชื่อบริการ">
+            <input type="number" class="form-input w-32 addon-price-input" placeholder="ราคา">
+            <button type="button" class="btn btn-danger p-2 rounded-lg h-10 w-10 flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-trash-alt"></i></button>
+        `;
+        container.appendChild(newAddon);
     }
 }

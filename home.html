@@ -203,7 +203,7 @@
     </header>
 
     <!-- Navigation Tabs for Level 1 Owner -->
-    <div id="level1-owner-tabs-container" class="container mx-auto px-4 mb-6 active hidden" >
+    <div id="level1-owner-tabs-container" class="container mx-auto px-4 mb-6 hidden">
         <div class="border-b border-slate-700">
             <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                 <button id="tab-my-rooms"
@@ -322,9 +322,9 @@
                 <h2 class="modal-title text-blue-400"><i class="fas fa-plus-circle mr-3"></i>สร้างรายการบิลใหม่</h2>
                 <button id="close-add-room-modal" class="modal-close-btn">&times;</button>
             </div>
-            <form id="add-room-form">
+            <form id="add-room-form" class="flex flex-col flex-grow min-h-0">
                 <div class="modal-body">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
                         <!-- Left Column: Basic & Water -->
                         <div class="flex flex-col gap-y-4">
                              <fieldset class="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
