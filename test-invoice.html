@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบใบแจ้งหนี้</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .invoice-preview {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 20px;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>ทดสอบฟังก์ชันใบแจ้งหนี้</h1>
+        
+        <button class="test-button" onclick="testGenerateInvoiceHTML()">ทดสอบสร้าง HTML</button>
+        <button class="test-button" onclick="testGenerateInvoiceCanvas()">ทดสอบสร้าง Canvas</button>
+        
+        <div id="invoice-preview" class="invoice-preview">
+            <p>ผลลัพธ์จะแสดงที่นี่...</p>
+        </div>
+    </div>
+
+    <script src="invoice-functions.js"></script>
+    <script>
+        // Mock data for testing
+        const mockBillData = {
+            id: 'test-bill-001',
+            room: '101',
+            name: 'สมชาย ใจดี',
+            date: '12/2024',
+            dueDate: '15/12/2024',
+            currentReading: 1500,
+            previousReading: 1400,
+            rate: 4.5,
+            waterCurrentReading: 50,
+            waterPreviousReading: 45,
+            waterRate: 15,
+            total: 450,
+            waterTotal: 75,
+            rent: 3000,
+            addons: [
+                { name: 'ค่าทำความสะอาด', price: 200 },
+                { name: 'ค่าประกัน', price: 100 }
+            ],
+            paymentConfirmed: false
+        };
+
+        // Mock function for getRoomName
+        async function getRoomName(roomId) {
+            return `ห้อง ${roomId}`;
+        }
+
+        async function testGenerateInvoiceHTML() {
+            try {
+                const html = await generateInvoiceHTML(mockBillData);
+                document.getElementById('invoice-preview').innerHTML = html;
+                console.log('HTML generated successfully');
+            } catch (error) {
+                console.error('Error generating HTML:', error);
+                document.getElementById('invoice-preview').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testGenerateInvoiceCanvas() {
+            try {
+                const canvas = await generateInvoiceCanvas(mockBillData);
+                const container = document.getElementById('invoice-preview');
+                container.innerHTML = '';
+                container.appendChild(canvas);
+                
+                // Add download button
+                const downloadBtn = document.createElement('button');
+                downloadBtn.textContent = 'ดาวน์โหลดรูปภาพ';
+                downloadBtn.className = 'test-button';
+                downloadBtn.onclick = () => {
+                    const link = document.createElement('a');
+                    link.download = 'test-invoice.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                };
+                container.appendChild(downloadBtn);
+                
+                console.log('Canvas generated successfully');
+            } catch (error) {
+                console.error('Error generating canvas:', error);
+                document.getElementById('invoice-preview').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html> 
