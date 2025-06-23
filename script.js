@@ -741,8 +741,13 @@ async function handleAddRoom(event) {
         
 
         userData.managedRooms.push(roomNumber);
-
+        
         await roomRef.set(newRoomData);
+        
+        await db.ref(`users/${auth.currentUser.uid}`).update({
+            managedRooms: userData.managedRooms
+        });
+        
 
         // Also add a new bill record for this room
         const billData = {
@@ -4962,6 +4967,7 @@ function setupCSVUpload() {
         const originalText = processBtn.innerHTML;
         processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังอัพโหลด...';
         processBtn.disabled = true;
+        
 
         try {
             let successCount = 0;
@@ -4970,6 +4976,7 @@ function setupCSVUpload() {
 
             for (let i = 0; i < csvData.length; i++) {
                 const row = csvData[i];
+                console.log(`Processing row ${i + 1}:`, row);
                 try {
                     const billData = {
                         room: row.room.trim(),
@@ -4982,6 +4989,31 @@ function setupCSVUpload() {
                         total: (parseFloat(row.current) - parseFloat(row.previous)) * parseFloat(row.rate),
                         timestamp: Date.now()
                     };
+                    let usrData = window.currentUserData;
+                    
+
+                    const newRoomData = {
+                        rent: row.rent.trim(),
+                        roomSize: row.size.trim(),
+                        tenantName: row.name.trim(),
+                        createdAt: new Date().toISOString(),
+                        createdBy: auth.currentUser?.uid || 'unknown',
+                        addons: [],
+                        assessmentFormUrl: ''
+                    };
+
+                    usrData.managedRooms.push(row.room.trim());
+
+                    await db.ref(`users/${auth.currentUser.uid}`).update({
+                        managedRooms: usrData.managedRooms
+                    });
+                    console.log(`New room data for ${row.room.trim()}:`, newRoomData);
+
+                    const roomRef = db.ref(`rooms/${row.room.trim()}`);
+                    
+                    await roomRef.set(newRoomData);
+                    
+                    
 
                     // Optional fields
                     if (row.dueDate && row.dueDate.trim()) {
