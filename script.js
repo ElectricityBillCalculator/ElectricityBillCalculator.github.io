@@ -303,12 +303,12 @@ function buildCardContainer(cardsContainer, sortedRooms) {
             statusBadgeHTML += `
                 <div class="lamp-switch-container">
                     <div class=\"lamp-switch-group\">
-                    <span class=\"lamp-label\">ว่าง</span>
+                    <span class=\"lamp-label\"></span>
                     <label class=\"lamp-switch\">
                         <input type=\"checkbox\" id=\"${statusSwitchId}\" class=\"room-status-switch\" ${isOccupied ? 'checked' : ''} />
                             <span class=\"lamp-slider\"></span>
                     </label>
-                    <span class=\"lamp-label\">มีผู้เช่า</span>
+                    <span class=\"lamp-label\"></span>
                     </div>
                 </div>
                 
