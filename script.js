@@ -2927,7 +2927,6 @@ function closeActionsMenu() {
 }
 
 function openActionsMenu(event, bill) {
-    
     event.stopPropagation();
     const existingMenu = document.getElementById('global-actions-menu');
     const isMenuOpenForThis = existingMenu && existingMenu.dataset.key === bill.id;
