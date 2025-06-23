@@ -538,17 +538,17 @@ async function renderHistoryTable(room) {
             const canDeleteRow = hasPermission('canDeleteBills', room) && (!isPaymentConfirmed || window.currentUserRole === 'admin' || window.currentUserRole === '1');
             
             const billJson = JSON.stringify(bill).replace(/"/g, '&quot;');
-
+            console.log('Rendering bill:', bill);
             const actionsHtml = `
                 <div class="flex items-center justify-center gap-4">
                     ${hasPermission('canGenerateInvoice', room) ? `
-                        <button onclick="generateInvoice('${bill.key}')" class="text-green-400 hover:text-green-300 transition-colors" title="ใบแจ้งหนี้">
+                        <button onclick="generateInvoice('${bill.id}')" class="text-green-400 hover:text-green-300 transition-colors" title="ใบแจ้งหนี้">
                             <i class="fas fa-file-invoice-dollar fa-lg"></i>
                         </button>
                     ` : ''}
 
                     ${!bill.evidenceUrl && hasPermission('canUploadEvidence', room) ? `
-                        <button onclick="openEvidenceModal('${bill.key}')" class="flex items-center gap-1.5 px-2.5 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold shadow-md transition-all" title="แนบหลักฐาน">
+                        <button onclick="openEvidenceModal('${bill.id}')" class="flex items-center gap-1.5 px-2.5 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold shadow-md transition-all" title="แนบหลักฐาน">
                             <i class="fas fa-upload"></i>
                             <span>แนบหลักฐาน</span>
                         </button>
@@ -561,7 +561,7 @@ async function renderHistoryTable(room) {
                     ` : ''}
 
                     ${canConfirmPayment ? `
-                        <button onclick="confirmPayment('${bill.key}')" class="text-emerald-400 hover:text-emerald-300 transition-colors" title="ยืนยันการชำระเงิน">
+                        <button onclick="confirmPayment('${bill.id}')" class="text-emerald-400 hover:text-emerald-300 transition-colors" title="ยืนยันการชำระเงิน">
                             <i class="fas fa-check-circle fa-lg"></i>
                         </button>
                     ` : ''}
@@ -1550,6 +1550,8 @@ function compressImage(file, maxWidth = 1024, maxHeight = 1024, quality = 0.8) {
 }
 
 async function handleEvidenceUpload() {
+
+
     logUploadEvent('upload_started', { keyForEvidence });
     console.log('=== handleEvidenceUpload started ===');
     
@@ -2789,7 +2791,7 @@ async function saveRoomNameEdit() {
         // Update all bills for this room with new name
         const updates = {};
         roomBills.forEach(bill => {
-            updates[`/${bill.key}/name`] = newName;
+            updates[`/${bill.id}/name`] = newName;
         });
         
         await db.ref('electricityData').update(updates);
@@ -2881,7 +2883,7 @@ async function confirmDeleteRoom() {
         
         // Delete all bills for this room
         const deletePromises = roomBills.map(bill => 
-            db.ref(`electricityData/${bill.key}`).remove()
+            db.ref(`electricityData/${bill.id}`).remove()
         );
         
         await Promise.all(deletePromises);
@@ -2925,9 +2927,10 @@ function closeActionsMenu() {
 }
 
 function openActionsMenu(event, bill) {
+    
     event.stopPropagation();
     const existingMenu = document.getElementById('global-actions-menu');
-    const isMenuOpenForThis = existingMenu && existingMenu.dataset.key === bill.key;
+    const isMenuOpenForThis = existingMenu && existingMenu.dataset.key === bill.id;
 
     // First, close any existing menu.
     closeActionsMenu();
@@ -2947,7 +2950,7 @@ function openActionsMenu(event, bill) {
     let menuItems = '';
     if (hasPermission('canEditAllBills', room)) {
         menuItems += `
-            <a href="#" onclick="event.preventDefault(); openEditModal('${bill.key}')" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700" role="menuitem">
+            <a href="#" onclick="event.preventDefault(); openEditModal('${bill.id}')" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700" role="menuitem">
                 <i class="fas fa-edit fa-fw"></i>
                 <span>แก้ไข</span>
             </a>
@@ -2955,7 +2958,7 @@ function openActionsMenu(event, bill) {
     }
     if (canDeleteEvidence) {
         menuItems += `
-            <a href="#" onclick="event.preventDefault(); deleteEvidence('${bill.key}')" class="flex items-center gap-3 px-4 py-2 text-sm text-orange-400 hover:bg-slate-700 hover:text-orange-300" role="menuitem">
+            <a href="#" onclick="event.preventDefault(); deleteEvidence('${bill.id}')" class="flex items-center gap-3 px-4 py-2 text-sm text-orange-400 hover:bg-slate-700 hover:text-orange-300" role="menuitem">
                 <i class="fas fa-file-excel fa-fw"></i>
                 <span>ลบหลักฐาน</span>
             </a>
@@ -2963,7 +2966,7 @@ function openActionsMenu(event, bill) {
     }
     if (canDeleteRow) {
          menuItems += `
-            <a href="#" onclick="event.preventDefault(); handleDeleteBill('${bill.key}')" class="flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-slate-700 hover:text-red-300" role="menuitem">
+            <a href="#" onclick="event.preventDefault(); handleDeleteBill('${bill.id}')" class="flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-slate-700 hover:text-red-300" role="menuitem">
                 <i class="fas fa-trash fa-fw"></i>
                 <span>ลบบิลนี้</span>
             </a>
@@ -2975,7 +2978,7 @@ function openActionsMenu(event, bill) {
     // Create menu container
     const menu = document.createElement('div');
     menu.id = 'global-actions-menu';
-    menu.dataset.key = bill.key; // Set a key to identify which button opened it
+    menu.dataset.key = bill.id; // Set a key to identify which button opened it
     menu.className = 'origin-top-right absolute mt-2 w-48 rounded-md shadow-lg bg-slate-800 ring-1 ring-black ring-opacity-5 focus:outline-none z-30 border border-slate-700';
     menu.innerHTML = `<div class="py-1" role="menu" aria-orientation="vertical">${menuItems}</div>`;
     
@@ -5150,7 +5153,7 @@ async function loadAllInvoices() {
             const totalCost = electricityCost + waterCost + rentCost;
             
             return {
-                key: bill.key,
+                key: bill.id,
                 room: bill.room,
                 name: bill.name,
                 date: bill.date,
