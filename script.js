@@ -267,12 +267,9 @@ function buildCardContainer(cardsContainer, sortedRooms) {
     sortedRooms.forEach(room => {
         try {
             const { id, bill, status, tenantName, roomSize } = room;
-
-            // --- Data validation and setting defaults ---
             const billExists = bill && bill.id;
             const currentTenantName = tenantName || (billExists ? bill.name : 'ไม่มีผู้เช่า');
             const roomStatus = status || (billExists ? 'occupied' : 'vacant');
-            // Use totalAll if available, otherwise fallback to total, then 0
             const totalAmount = billExists ? (bill.totalAll !== undefined ? bill.totalAll : (bill.total !== undefined ? bill.total : 0) ) : 0;
             const dueDateInfo = billExists ? getDueDateInfo(bill.dueDate) : { text: 'ไม่มีข้อมูล', color: 'text-slate-500' };
             const lastBillDate = billExists ? (bill.date || 'ไม่มีข้อมูล') : 'ไม่มีข้อมูล';
@@ -280,68 +277,86 @@ function buildCardContainer(cardsContainer, sortedRooms) {
             const card = document.createElement('div');
             card.className = `room-card bg-slate-800 rounded-xl shadow-lg border border-slate-700/80 p-4 flex flex-col transition-all duration-300 hover:border-blue-500/70 hover:shadow-blue-500/10 relative`;
             card.dataset.roomId = id;
-            
+
+            // --- ปุ่มหลอดสวิตช์สถานะห้อง ---
+            const statusSwitchId = `room-status-switch-${id}`;
+            const isOccupied = roomStatus === 'occupied' || roomStatus === 'มีผู้เช่า';
+            const statusSwitchHTML = `
+                <div class=\"flex justify-between items-center mb-2\">
+                    <h3 class=\"text-3xl font-bold text-white tracking-wider\">${id}</h3>
+                    <div class=\"lamp-switch-group\">
+                        <span class=\"lamp-label\">ว่าง</span>
+                        <label class=\"lamp-switch\">
+                            <input type=\"checkbox\" id=\"${statusSwitchId}\" class=\"room-status-switch\" ${isOccupied ? 'checked' : ''} />
+                            <span class=\"lamp-slider\"></span>
+                        </label>
+                        <span class=\"lamp-label\">มีผู้เช่า</span>
+                    </div>
+                </div>
+            `;
+
             let statusBadgeHTML = '';
-            if (roomStatus === 'occupied') {
+            if (roomStatus === 'occupied' || roomStatus === 'มีผู้เช่า') {
                 statusBadgeHTML = `<div class="absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-400/30">มีคนอยู่</div>`;
             } else {
-                 statusBadgeHTML = `<div class="absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-400/30">ว่าง</div>`;
+                statusBadgeHTML = `<div class="absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-400/30">ว่าง</div>`;
             }
 
             const totalAmountColor = totalAmount > 0 ? 'text-red-400' : 'text-slate-300';
-            
+
             card.innerHTML = `
                 ${statusBadgeHTML}
-                <div class="flex-grow flex flex-col">
-                    <div class="flex-grow">
-                        <h3 class="text-3xl font-bold text-white tracking-wider">${id}</h3>
-                        <div class="text-sm text-slate-400 mt-1 space-y-1 min-h-[3rem]">
-                            <p class="flex items-center min-h-[20px]">
-                                <i class="fas fa-user w-4 mr-2 text-slate-500"></i>
-                                <span>${currentTenantName}</span>
-                            </p>
-                            ${roomSize ? `
-                            <p class="flex items-center min-h-[20px]">
-                                <i class="fas fa-ruler-combined w-4 mr-2 text-slate-500"></i>
-                                <span>${roomSize}</span>
-                            </p>
-                            ` : ''}
-                        </div>
-
-                        <div class="mt-4 text-center bg-slate-800/50 rounded-lg py-2">
-                            <p class="text-xs text-slate-500">ยอดชำระล่าสุด</p>
-                            <p class="text-3xl font-light ${totalAmountColor} tracking-tight">
-                               ฿${Number(totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                        </div>
+                ${statusSwitchHTML}
+                <div class=\"flex-grow flex flex-col\">
+                    <div class=\"text-sm text-slate-400 mt-1 space-y-1 min-h-[3rem]\">
+                        <p class=\"flex items-center min-h-[20px]\">
+                            <i class=\"fas fa-user w-4 mr-2 text-slate-500\"></i>
+                            <span>${currentTenantName}</span>
+                        </p>
+                        ${roomSize ? `
+                        <p class=\"flex items-center min-h-[20px]\">
+                            <i class=\"fas fa-ruler-combined w-4 mr-2 text-slate-500\"></i>
+                            <span>${roomSize}</span>
+                        </p>
+                        ` : ''}
                     </div>
-
-                    <div class="mt-3 space-y-1">
-                        <div class="flex justify-between text-xs text-slate-400">
+                    <div class=\"mt-4 text-center bg-slate-800/50 rounded-lg py-2\">
+                        <p class=\"text-xs text-slate-500\">ยอดชำระล่าสุด</p>
+                        <p class=\"text-3xl font-light ${totalAmountColor} tracking-tight\">
+                           ฿${Number(totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                    </div>
+                    <div class=\"mt-3 space-y-1\">
+                        <div class=\"flex justify-between text-xs text-slate-400\">
                             <span>กำหนดชำระ:</span>
-                            <span class="font-semibold ${dueDateInfo.color}">${dueDateInfo.text}</span>
+                            <span class=\"font-semibold ${dueDateInfo.color}\">${dueDateInfo.text}
                         </div>
                     </div>
                 </div>
-
-                <div class="mt-4 pt-3 border-t border-slate-700 grid grid-cols-4 gap-2 text-center">
-                     <button onclick="viewRoomHistory('${id}')" title="ประวัติและเพิ่มบิล" class="card-icon-button">
-                        <i class="fas fa-history"></i>
+                <div class=\"mt-4 pt-3 border-t border-slate-700 grid grid-cols-4 gap-2 text-center\">
+                     <button onclick=\"viewRoomHistory('${id}')\" title=\"ประวัติและเพิ่มบิล\" class=\"card-icon-button\">
+                        <i class=\"fas fa-history\"></i>
                     </button>
-                    <button onclick="generateInvoiceForRoom('${id}')" title="ใบแจ้งหนี้" class="card-icon-button">
-                        <i class="fas fa-file-invoice-dollar"></i>
+                    <button onclick=\"generateInvoiceForRoom('${id}')\" title=\"ใบแจ้งหนี้\" class=\"card-icon-button\">
+                        <i class=\"fas fa-file-invoice-dollar\"></i>
                     </button>
-                    <button onclick="openAssessmentModal('${id}')" title="ใบประเมินอุปกรณ์" class="card-icon-button">
-                        <i class="fas fa-clipboard-check"></i>
+                    <button onclick=\"openAssessmentModal('${id}')\" title=\"ใบประเมินอุปกรณ์\" class=\"card-icon-button\">
+                        <i class=\"fas fa-clipboard-check\"></i>
                     </button>
-                    <button onclick="openRoomSettingsModal('${id}')" title="ตั้งค่าห้อง" class="card-icon-button">
-                        <i class="fas fa-cog"></i>
+                    <button onclick=\"openRoomSettingsModal('${id}')\" title=\"ตั้งค่าห้อง\" class=\"card-icon-button\">
+                        <i class=\"fas fa-cog\"></i>
                     </button>
                 </div>
             `;
-            
             cardsContainer.appendChild(card);
 
+            // เพิ่ม event listener ให้กับสวิตช์สถานะห้อง
+            setTimeout(() => {
+                const switchEl = document.getElementById(statusSwitchId);
+                if (switchEl) {
+                    switchEl.addEventListener('change', (e) => handleRoomStatusSwitch(room, e.target.checked));
+                }
+            }, 0);
         } catch (error) {
             console.error(`CRITICAL: Failed to build card for room ID: ${room.id}.`, error);
             const errorCard = document.createElement('div');
@@ -350,6 +365,20 @@ function buildCardContainer(cardsContainer, sortedRooms) {
             cardsContainer.appendChild(errorCard);
         }
     });
+}
+
+// เพิ่มฟังก์ชัน handleRoomStatusSwitch
+async function handleRoomStatusSwitch(room, isOccupied) {
+    const newStatus = isOccupied ? 'occupied' : 'vacant';
+    try {
+        await db.ref(`rooms/${room.id}`).update({ status: newStatus });
+        showAlert(`อัปเดตสถานะห้อง ${room.id} เป็น "${isOccupied ? 'มีผู้เช่า' : 'ว่าง'}" สำเร็จ`, 'success');
+        if (typeof renderHomeRoomCards === 'function') {
+            await renderHomeRoomCards();
+        }
+    } catch (error) {
+        showAlert(`เกิดข้อผิดพลาดในการอัปเดตสถานะห้อง: ${error.message}`, 'error');
+    }
 }
 
 async function promptForTenantName(roomId, currentName) {
