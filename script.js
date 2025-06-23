@@ -282,25 +282,47 @@ function buildCardContainer(cardsContainer, sortedRooms) {
             const statusSwitchId = `room-status-switch-${id}`;
             const isOccupied = roomStatus === 'occupied' || roomStatus === 'มีผู้เช่า';
             const statusSwitchHTML = `
-                <div class=\"flex justify-between items-center mb-2\">
+                <div class=\"flex items-center mb-2\">
                     <h3 class=\"text-3xl font-bold text-white tracking-wider\">${id}</h3>
-                    <div class=\"lamp-switch-group\">
-                        <span class=\"lamp-label\">ว่าง</span>
-                        <label class=\"lamp-switch\">
-                            <input type=\"checkbox\" id=\"${statusSwitchId}\" class=\"room-status-switch\" ${isOccupied ? 'checked' : ''} />
-                            <span class=\"lamp-slider\"></span>
-                        </label>
-                        <span class=\"lamp-label\">มีผู้เช่า</span>
-                    </div>
+                    
                 </div>
             `;
 
-            let statusBadgeHTML = '';
+            let statusBadgeHTML = '<div class="absolute top-3 right-3 z-10 items-center space-x-2">';
             if (roomStatus === 'occupied' || roomStatus === 'มีผู้เช่า') {
-                statusBadgeHTML = `<div class="absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-400/30">มีคนอยู่</div>`;
+                statusBadgeHTML += `<div class=" top-3 right-3 text-xs font-bold px-2 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-400/30">มีคนอยู่</div>`;
             } else {
-                statusBadgeHTML = `<div class="absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-400/30">ว่าง</div>`;
+                statusBadgeHTML += `<div class=" top-3 right-3 text-xs font-bold px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-400/30">ว่าง</div>`;
             }
+            /*
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    display: block;
+                    width: 56px;
+            */
+            statusBadgeHTML += `
+                <div class="lamp-switch-container">
+                    <div class=\"lamp-switch-group\">
+                    <span class=\"lamp-label\">ว่าง</span>
+                    <label class=\"lamp-switch\">
+                        <input type=\"checkbox\" id=\"${statusSwitchId}\" class=\"room-status-switch\" ${isOccupied ? 'checked' : ''} />
+                            <span class=\"lamp-slider\"></span>
+                    </label>
+                    <span class=\"lamp-label\">มีผู้เช่า</span>
+                    </div>
+                </div>
+                
+                </div>
+            `
+            //<div class=\"lamp-switch-group\">
+            //  <span class=\"lamp-label\">ว่าง</span>
+            //  <label class=\"lamp-switch\">
+            //      <input type=\"checkbox\" id=\"${statusSwitchId}\" class=\"room-status-switch\" ${isOccupied ? 'checked' : ''} />
+            //          <span class=\"lamp-slider\"></span>
+            //   </label>
+            //<span class=\"lamp-label\">มีผู้เช่า</span>
+            //</div>
 
             const totalAmountColor = totalAmount > 0 ? 'text-red-400' : 'text-slate-300';
 
