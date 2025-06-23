@@ -191,7 +191,6 @@ async function renderHomeRoomCards() {
         const userData = window.currentUserData;
         
         let displayableRoomIds = allRoomIds; 
-        
         if (userRole === 'admin') {
             if (userData && userData.buildingCode) {
                 displayableRoomIds = allRoomIds.filter(roomId => {
@@ -304,12 +303,12 @@ function buildCardContainer(cardsContainer, sortedRooms) {
             statusBadgeHTML += `
                 <div class="lamp-switch-container">
                     <div class=\"lamp-switch-group\">
-                    <span class=\"lamp-label\"></span>
+                    <span class=\"lamp-label\">ว่าง</span>
                     <label class=\"lamp-switch\">
                         <input type=\"checkbox\" id=\"${statusSwitchId}\" class=\"room-status-switch\" ${isOccupied ? 'checked' : ''} />
                             <span class=\"lamp-slider\"></span>
                     </label>
-                    <span class=\"lamp-label\"></span>
+                    <span class=\"lamp-label\">มีผู้เช่า</span>
                     </div>
                 </div>
                 
@@ -615,7 +614,6 @@ async function loadFromFirebase(room = null) {
     if (!user) {
         return [];
     }
-
     let dataRef;
     if (room) {
         dataRef = db.ref(`electricityData`).orderByChild('room').equalTo(room);
@@ -740,6 +738,9 @@ async function handleAddRoom(event) {
         if (window.currentUserRole === 'admin' && userData && userData.buildingCode) {
             newRoomData.buildingCode = userData.buildingCode;
         }
+        
+
+        userData.managedRooms.push(roomNumber);
 
         await roomRef.set(newRoomData);
 
@@ -765,6 +766,10 @@ async function handleAddRoom(event) {
         };
         
         await db.ref('electricityData').push(billData);
+
+        await db.ref(`users/${auth.currentUser.uid}`).update({
+            managedRooms: userData.managedRooms
+        });
         
         showAlert(`สร้างห้อง ${roomNumber} สำเร็จ`, 'success');
         closeModal('add-room-modal');
@@ -1082,36 +1087,6 @@ async function migrateOldData() {
     }
 }
 
-// ฟังก์ชันสำหรับอัปเดตข้อมูลบิลเก่าใน Firebase ให้มี field room
-async function migrateRoomFieldToAllBills(defaultRoom = '001') {
-    try {
-        const snapshot = await db.ref('electricityData').once('value');
-        const data = snapshot.val();
-        if (!data) {
-            showAlert('ไม่พบข้อมูลบิลในระบบ', 'error');
-            return;
-        }
-        let updatedCount = 0;
-        for (const key in data) {
-            if (data.hasOwnProperty(key)) {
-                const bill = data[key];
-                if (!bill.room) {
-                    // พยายามดึงจาก URL
-                    const params = new URLSearchParams(window.location.search);
-                    const roomParam = params.get('room');
-                    const roomValue = roomParam || defaultRoom;
-                    await db.ref(`electricityData/${key}`).update({ room: roomValue });
-                    updatedCount++;
-                }
-            }
-        }
-        showAlert(`อัปเดตข้อมูลบิลเก่าเรียบร้อยแล้ว (${updatedCount} รายการ)`, 'success');
-    } catch (error) {
-        console.error('Error migrating room field:', error);
-        showAlert('เกิดข้อผิดพลาดในการอัปเดตข้อมูลบิลเก่า', 'error');
-    }
-}
-
 
 // --- UI & Utility ---
 
@@ -1312,16 +1287,12 @@ function openEvidenceModal(key) {
     console.log('=== openEvidenceModal started ===');
     console.log('Key parameter:', key);
     
-    if (!key) {
-        showAlert('ไม่พบข้อมูลบิลสำหรับแนบหลักฐาน', 'error');
-        console.error('openEvidenceModal called without key!');
-        return;
-    }
     if (!hasPermission('canUploadEvidence')) {
         console.log('Permission denied: canUploadEvidence');
         showAlert('คุณไม่มีสิทธิ์แนบหลักฐาน', 'error');
         return;
     }
+    
     keyForEvidence = key;
     console.log('keyForEvidence set to:', keyForEvidence);
     
@@ -4826,7 +4797,7 @@ function setupCSVUpload() {
         previewHTML += '</tr></thead>';
 
         // Data (show first 5 rows)
-        previewHTML += '<tbody class="divide-y divide-gray-200">';
+        previewHTML += '<tbody class="divide-y divide-slate-600">';
         csvData.slice(0, 5).forEach(row => {
             previewHTML += '<tr>';
             csvHeaders.forEach(header => {
@@ -5145,15 +5116,12 @@ async function loadAllInvoices() {
             const waterCost = bill.waterTotal || 0;
             const rentCost = bill.rent || 0;
             const totalCost = electricityCost + waterCost + rentCost;
+            
             return {
-                id: bill.key, // เพิ่ม id สำหรับการค้นหา
                 key: bill.key,
                 room: bill.room,
                 name: bill.name,
                 date: bill.date,
-                total: bill.total, // เพิ่ม total สำหรับ generateInvoiceHTML
-                waterTotal: bill.waterTotal, // เพิ่ม waterTotal สำหรับ generateInvoiceHTML
-                rent: bill.rent, // เพิ่ม rent สำหรับ generateInvoiceHTML
                 electricityCost: electricityCost,
                 waterCost: waterCost,
                 rentCost: rentCost,
@@ -5246,13 +5214,13 @@ function renderAllInvoicesTable() {
                 <td class="px-4 py-3 font-medium text-white">${invoice.room}</td>
                 <td class="px-4 py-3 text-slate-300">${invoice.name}</td>
                 <td class="px-4 py-3 text-slate-400">${invoice.date}</td>
-                <td class="px-4 py-3 text-right">${(invoice.electricityCost || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
-                <td class="px-4 py-3 text-right">${(invoice.waterCost || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
-                <td class="px-4 py-3 text-right">${(invoice.rentCost || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
+                <td class="px-4 py-3 text-right">${(invoice.total || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
+                <td class="px-4 py-3 text-right">${(invoice.waterTotal || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
+                <td class="px-4 py-3 text-right">${(invoice.rent || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
                 <td class="px-4 py-3 text-right font-bold text-white">${invoice.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
                 <td class="px-4 py-3 text-center">
                     <div class="flex items-center justify-center gap-2">
-                        <button onclick="generateInvoiceForRoom('${invoice.room}')" class="text-green-400 hover:text-green-300 transition-colors" title="ดูใบแจ้งหนี้">
+                        <button onclick="generateInvoice('${invoice.id}')" class="text-green-400 hover:text-green-300 transition-colors" title="ดูใบแจ้งหนี้">
                             <i class="fas fa-file-invoice-dollar"></i>
                         </button>
                         ${canDelete ? `<button onclick="handleDeleteBill('${invoice.id}')" class="text-red-400 hover:text-red-300 transition-colors" title="ลบใบแจ้งหนี้">
