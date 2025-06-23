@@ -202,6 +202,23 @@
         <p class="text-slate-400 mt-2">ภาพรวมห้องพักและบิลทั้งหมดของคุณ</p>
     </header>
 
+    <div id="admin-tools-container" class="mt-4 p-2 bg-slate-700/80 rounded-lg border border-slate-600 flex flex-col gap-1 w-full max-w-3xl mx-auto shadow">
+        <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-semibold text-yellow-300 flex items-center gap-2">
+                <i class="fas fa-tools text-yellow-300"></i> เครื่องมือผู้ดูแลระบบ
+            </span>
+            <span class="text-slate-400 text-xs">(แสดงเฉพาะ Admin)</span>
+        </div>
+        <div id="admin-tools" class="flex flex-row gap-2 flex-wrap items-center">
+            <button id="btn-view-all-invoices" class="btn btn-success text-sm px-4 py-2 rounded font-bold shadow">
+                <i class="fas fa-file-invoice-dollar"></i> ดูใบแจ้งหนี้ทั้งหมด
+            </button>
+            <button id="btn-admin-panel" class="btn btn-primary text-sm px-4 py-2 rounded font-bold shadow">
+                <i class="fas fa-cog"></i> แผงควบคุม
+            </button>
+        </div>
+    </div>
+
     <!-- Navigation Tabs for Level 1 Owner -->
     <div id="level1-owner-tabs-container" class="container mx-auto px-4 mb-6 hidden">
         <div class="border-b border-slate-700">
@@ -313,19 +330,6 @@
                 </div>
             </div>
         </section>
-         <div id="admin-tools-container" class="mt-8 p-4 bg-slate-800 rounded-lg border border-slate-700 hidden">
-             <h3 class="text-lg font-semibold text-yellow-400 mb-3">เครื่องมือผู้ดูแลระบบ</h3>
-            <div id="admin-tools" class="flex gap-4 flex-wrap">
-                <!-- Admin-only buttons will be injected here by auth.js -->
-                <button id="btn-view-all-invoices" class="btn btn-success">
-                    <i class="fas fa-file-invoice-dollar"></i>ดูใบแจ้งหนี้ทั้งหมด
-                </button>
-                <button id="btn-admin-panel" class="btn btn-primary">
-                    <i class="fas fa-cog"></i>แผงควบคุม
-                </button>
-                 <p class="text-slate-400 text-sm"> (ส่วนนี้จะแสดงเมื่อ Admin เข้าสู่ระบบ)</p>
-            </div>
-        </div>
     </main>
 
     <!-- MODALS: Refactored with new CSS classes -->

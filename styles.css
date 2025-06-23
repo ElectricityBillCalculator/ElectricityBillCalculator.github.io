@@ -569,3 +569,26 @@ body.modal-open {
 .lamp-switch-container {
     
 }
+
+#admin-tools {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+#admin-tools button {
+  min-width: 200px;
+  font-size: 1.15rem;
+  padding: 0.85rem 2rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+  transition: transform 0.1s;
+}
+
+#admin-tools button:active {
+  transform: scale(0.97);
+}

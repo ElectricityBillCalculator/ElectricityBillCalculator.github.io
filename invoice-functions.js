@@ -109,24 +109,18 @@ async function generateInvoiceHTML(billData) {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            ${electricityCost > 0 ? `
                             <tr>
                                 <td class="px-4 py-3 text-sm">ค่าไฟฟ้า</td>
                                 <td class="px-4 py-3 text-sm text-right">${electricityCost.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                             </tr>
-                            ` : ''}
-                            ${waterCost > 0 ? `
                             <tr>
                                 <td class="px-4 py-3 text-sm">ค่าน้ำ</td>
                                 <td class="px-4 py-3 text-sm text-right">${waterCost.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                             </tr>
-                            ` : ''}
-                            ${rentCost > 0 ? `
                             <tr>
                                 <td class="px-4 py-3 text-sm">ค่าเช่า</td>
                                 <td class="px-4 py-3 text-sm text-right">${rentCost.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                             </tr>
-                            ` : ''}
                             ${billData.addons && billData.addons.length > 0 ? billData.addons.map(addon => `
                             <tr>
                                 <td class="px-4 py-3 text-sm">${addon.name || 'อื่นๆ'}</td>
