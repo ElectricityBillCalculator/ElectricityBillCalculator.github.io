@@ -198,7 +198,7 @@
         </div>
     </nav>
 
-    <header class="pt-10 pb-4 text-center" data-animation>
+    <header class="pt-10 pb-4 text-center">
         <h1 class="text-4xl font-extrabold text-white tracking-wide">หน้าหลัก</h1>
         <p class="text-slate-400 mt-2">ภาพรวมห้องพักและบิลทั้งหมดของคุณ</p>
     </header>
@@ -206,7 +206,7 @@
     <main class="container mx-auto px-4 py-8">
         <!-- Room Cards Section -->
         <section id="my-rooms-content" class="tab-content L1tab-content">
-            <div class="flex flex-wrap justify-between items-center mb-8 gap-4" data-animation>
+            <div class="flex flex-wrap justify-between items-center mb-8 gap-4" >
                 <div class="flex items-center gap-6">
                     <h2 class="text-2xl font-bold text-white flex items-center gap-3">
                         <i class="fas fa-door-open text-blue-400"></i>ห้องพัก
@@ -220,7 +220,7 @@
                      <button id="btn-add-room" class="btn btn-primary">
                         <i class="fas fa-plus-circle"></i>เพิ่มห้องใหม่
                 </button>
-                    <button id="btn-upload-csv" class="btn btn-success">
+                    <button id="btn-upload-csv" class="btn btn-success" >
                         <i class="fas fa-file-csv"></i>อัพโหลด CSV
                     </button>
                     <!-- Bulk add button will be added here by script.js -->
@@ -234,7 +234,7 @@
 
         <!-- Tenant Management Section (hidden by default) -->
         <section id="manage-tenants-content" class="tab-content L1tab-content hidden">
-            <div class="flex justify-between items-center mb-6" data-animation>
+            <div class="flex justify-between items-center mb-6" >
                 <h2 class="text-2xl font-bold text-white">
                     <i class="fas fa-users-cog mr-2 text-teal-400"></i>จัดการลูกบ้าน
                 </h2>
@@ -651,7 +651,7 @@
     </script>
     <script src="auth.js"></script>
     <script src="invoice-functions.js"></script>
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
     <script src="tenantManagement.js"></script>
 </body>
 </html> 
