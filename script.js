@@ -3366,8 +3366,13 @@ function closeModal(modalId) {
     // Remove active class to trigger transition
     modal.classList.remove('active');
     
+    if (modal.style.display !== 'none') {
+            modal.style.display = 'none';
+            modal.style.visibility = 'hidden';
+            document.body.classList.remove('modal-open');
+        }
     // Wait for transition to complete before hiding
-    const onTransitionEnd = () => {
+    /*const onTransitionEnd = () => {
         modal.style.display = 'none';
         modal.style.visibility = 'hidden';
         modal.removeEventListener('transitionend', onTransitionEnd);
@@ -3385,7 +3390,7 @@ function closeModal(modalId) {
             modal.style.visibility = 'hidden';
             document.body.classList.remove('modal-open');
         }
-    }, 300);
+    }, 300);*/
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -5153,7 +5158,7 @@ let currentInvoicesPage = 1;
 const INVOICES_PER_PAGE = 10;
 
 async function openAllInvoicesModal() {
-    openModal('all-invoices-modal');
+    openModal('all-invoices-table-modal');
     await loadAllInvoices();
 }
 

@@ -202,7 +202,7 @@
         <h1 class="text-4xl font-extrabold text-white tracking-wide">หน้าหลัก</h1>
         <p class="text-slate-400 mt-2">ภาพรวมห้องพักและบิลทั้งหมดของคุณ</p>
         <div class="mt-6 flex justify-center">
-            <button id="btn-show-all-invoices-table" class="btn btn-success text-lg px-6 py-3 rounded font-bold shadow flex items-center gap-2">
+            <button id="btn-show-all-invoices-table" onclick="openAllInvoicesModal()" class="btn btn-success text-lg px-6 py-3 rounded font-bold shadow flex items-center gap-2">
                 <i class="fas fa-table"></i> ดูตารางใบแจ้งหนี้ทั้งหมด
             </button>
         </div>
@@ -647,7 +647,7 @@
         <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-5xl mx-auto shadow-lg flex flex-col max-h-[90vh]">
             <div class="p-4 flex justify-between items-center border-b border-slate-700 flex-shrink-0">
                 <h2 class="text-xl font-bold text-green-400 flex items-center gap-2"><i class="fas fa-table"></i> ตารางใบแจ้งหนี้ทั้งหมด</h2>
-                <button class="text-2xl text-slate-400 hover:text-white transition-colors" id="close-all-invoices-table-modal">&times;</button>
+                <button class="text-2xl text-slate-400 hover:text-white transition-colors" id="close-all-invoices-table-modal" onclick="closeModal('all-invoices-table-modal');">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto flex flex-col gap-4">
                 <div class="flex flex-col sm:flex-row gap-4 items-center mb-4">
@@ -668,7 +668,7 @@
                                 <th class="py-3 px-4 text-slate-300 font-semibold text-sm text-right">ยอดรวม</th>
                             </tr>
                         </thead>
-                        <tbody id="all-invoices-table-body-modal" class="divide-y divide-slate-700 text-sm">
+                        <tbody id="all-invoices-table-body" class="divide-y divide-slate-700 text-sm">
                             <tr><td colspan="8" class="text-center py-10 text-slate-400">กำลังโหลดข้อมูล...</td></tr>
                         </tbody>
                     </table>
