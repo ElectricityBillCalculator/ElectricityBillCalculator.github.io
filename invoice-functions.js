@@ -33,6 +33,17 @@ async function generateInvoiceHTML(billData) {
         roomName = `ห้อง ${billData.room}`;
     }
 
+    // --- สร้าง HTML สำหรับ Addon ---
+    let addonRows = '';
+    if (billData.addons && billData.addons.length > 0) {
+        addonRows = billData.addons.map(addon => `
+            <tr>
+                <td class="px-4 py-3 text-sm">${addon.name || 'อื่นๆ'}</td>
+                <td class="px-4 py-3 text-sm text-right">${(parseFloat(addon.price) || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+            </tr>
+        `).join('');
+    }
+
     return `
         <div class="invoice-container bg-white text-black p-8 max-w-2xl mx-auto" id="invoice-content">
             <!-- Header -->
@@ -121,12 +132,7 @@ async function generateInvoiceHTML(billData) {
                                 <td class="px-4 py-3 text-sm">ค่าเช่า</td>
                                 <td class="px-4 py-3 text-sm text-right">${rentCost.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                             </tr>
-                            ${billData.addons && billData.addons.length > 0 ? billData.addons.map(addon => `
-                            <tr>
-                                <td class="px-4 py-3 text-sm">${addon.name || 'อื่นๆ'}</td>
-                                <td class="px-4 py-3 text-sm text-right">${(parseFloat(addon.price) || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                            </tr>
-                            `).join('') : ''}
+                            ${addonRows}
                         </tbody>
                         <tfoot class="bg-gray-50">
                             <tr>

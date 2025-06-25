@@ -46,6 +46,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Initialize Flatpickr for date fields
     initializeFlatpickr();
+
+    const searchInvoicesInput = document.getElementById('search-invoices');
+    if (searchInvoicesInput) {
+        searchInvoicesInput.addEventListener('input', filterAllInvoices);
+    }
 });
 
 // Initialize Flatpickr date pickers
@@ -5051,6 +5056,15 @@ function setupCSVUpload() {
                         billData.buildingCode = userData.buildingCode;
                     }
 
+                    // ดึง addons จาก room แล้วใส่ใน billData ก่อน save
+                    try {
+                        const roomAddonsSnap = await db.ref(`rooms/${billData.room}/addons`).once('value');
+                        const roomAddons = roomAddonsSnap.val();
+                        billData.addons = Array.isArray(roomAddons) ? roomAddons : (roomAddons ? Object.values(roomAddons) : []);
+                    } catch (e) {
+                        billData.addons = [];
+                    }
+
                     await saveToFirebase(billData);
                     successCount++;
                 } catch (error) {
@@ -5123,7 +5137,7 @@ async function loadAllInvoices() {
     const tbody = document.getElementById('all-invoices-table-body');
     const loadingRow = `
         <tr>
-            <td colspan="9" class="text-center py-10 text-slate-400">
+            <td colspan="10" class="text-center py-10 text-slate-400">
                 <i class="fas fa-spinner fa-spin text-2xl mb-3"></i><br>
                 กำลังโหลดข้อมูลใบแจ้งหนี้...
             </td>
@@ -5144,13 +5158,13 @@ async function loadAllInvoices() {
             return true;
         })
         .map(bill => {
-            // This logic is simplified from a previous version.
             // Ensure costs are calculated correctly.
             const electricityCost = bill.total || 0;
             const waterCost = bill.waterTotal || 0;
             const rentCost = bill.rent || 0;
-            const totalCost = electricityCost + waterCost + rentCost;
-            
+            const addons = Array.isArray(bill.addons) ? bill.addons : [];
+            const addonTotal = addons.reduce((sum, addon) => sum + (parseFloat(addon.price) || 0), 0);
+            const totalCost = electricityCost + waterCost + rentCost + addonTotal;
             return {
                 key: bill.id,
                 room: bill.room,
@@ -5159,6 +5173,8 @@ async function loadAllInvoices() {
                 electricityCost: electricityCost,
                 waterCost: waterCost,
                 rentCost: rentCost,
+                addonTotal: addonTotal,
+                addons: addons,
                 totalCost: totalCost,
                 dueDate: bill.dueDate,
                 paymentConfirmed: bill.paymentConfirmed || false,
@@ -5224,7 +5240,7 @@ function renderAllInvoicesTable() {
     if (paginatedInvoices.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="text-center py-10 text-slate-400">
+                <td colspan="10" class="text-center py-10 text-slate-400">
                     <i class="fas fa-search text-2xl mb-3"></i><br>
                     ไม่พบใบแจ้งหนี้ที่ตรงกับเงื่อนไข
                 </td>
@@ -5234,32 +5250,36 @@ function renderAllInvoicesTable() {
     }
 
     tbody.innerHTML = paginatedInvoices.map(invoice => {
-        const totalCost = (invoice.total || 0) + (invoice.waterTotal || 0) + (invoice.rent || 0);
-        const addonTotal = invoice.addons?.reduce((sum, addon) => sum + (parseFloat(addon.price) || 0), 0) || 0;
-        invoice.totalCost = totalCost + addonTotal;
-
+        const electricityCost = invoice.electricityCost || 0;
+        const waterCost = invoice.waterCost || 0;
+        const rentCost = invoice.rentCost || 0;
+        const addonTotal = invoice.addonTotal || 0;
+        const totalCost = invoice.totalCost || (electricityCost + waterCost + rentCost + addonTotal);
         const canDelete = hasPermission('canDeleteBills', invoice.room);
-
+        // Tooltip รายการ addon
+        let addonDetail = '';
+        if (invoice.addons && invoice.addons.length > 0) {
+            addonDetail = invoice.addons.map(a => `${a.name || 'อื่นๆ'}: ${(parseFloat(a.price) || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿`).join('\n');
+        }
         return `
             <tr class="hover:bg-slate-700/50">
                 <td class="px-2 py-3 text-center">
-                    <input type="checkbox" class="invoice-select-checkbox form-checkbox bg-slate-900 border-slate-600 text-green-500 focus:ring-green-500" data-invoice-id="${invoice.id}">
+                    <input type="checkbox" class="invoice-select-checkbox form-checkbox bg-slate-900 border-slate-600 text-green-500 focus:ring-green-500" data-invoice-id="${invoice.key}">
                 </td>
                 <td class="px-4 py-3 font-medium text-white">${invoice.room}</td>
                 <td class="px-4 py-3 text-slate-300">${invoice.name}</td>
                 <td class="px-4 py-3 text-slate-400">${invoice.date}</td>
-                <td class="px-4 py-3 text-right">${(invoice.total || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
-                <td class="px-4 py-3 text-right">${(invoice.waterTotal || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
-                <td class="px-4 py-3 text-right">${(invoice.rent || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
-                <td class="px-4 py-3 text-right font-bold text-white">${invoice.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
+                <td class="px-4 py-3 text-right">${electricityCost.toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
+                <td class="px-4 py-3 text-right">${waterCost.toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
+                <td class="px-4 py-3 text-right">${rentCost.toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
+                <td class="px-4 py-3 text-right" title="${addonDetail}">${addonTotal > 0 ? addonTotal.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ฿' : '-'}</td>
+                <td class="px-4 py-3 text-right font-bold text-white">${totalCost.toLocaleString('en-US', {minimumFractionDigits: 2})} ฿</td>
                 <td class="px-4 py-3 text-center">
                     <div class="flex items-center justify-center gap-2">
-                        <button onclick="generateInvoice('${invoice.id}')" class="text-green-400 hover:text-green-300 transition-colors" title="ดูใบแจ้งหนี้">
+                        <button onclick="generateInvoice('${invoice.key}')" class="text-green-400 hover:text-green-300 transition-colors" title="ดูใบแจ้งหนี้">
                             <i class="fas fa-file-invoice-dollar"></i>
                         </button>
-                        ${canDelete ? `<button onclick="handleDeleteBill('${invoice.id}')" class="text-red-400 hover:text-red-300 transition-colors" title="ลบใบแจ้งหนี้">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>` : ''}
+                        ${canDelete ? `<button onclick="deleteInvoice('${invoice.key}')" class="text-red-400 hover:text-red-300 transition-colors" title="ลบใบแจ้งหนี้"><i class="fas fa-trash-alt"></i></button>` : ''}
                     </div>
                 </td>
             </tr>
@@ -5332,9 +5352,9 @@ function changeInvoicesPage(direction) {
 }
 
 function filterAllInvoices() {
-    invoicesCurrentPage = 1; // Reset to page 1 on any filter change
+    currentInvoicesPage = 1; // Reset to page 1 on any filter change
 
-    const searchTerm = document.getElementById('search-invoices').value.toLowerCase();
+    const searchTerm = document.getElementById('search-invoices').value.trim().toLowerCase();
     const roomFilter = document.getElementById('filter-invoice-room').value;
     const dateFilter = document.getElementById('filter-invoice-date').value;
 
@@ -5345,6 +5365,7 @@ function filterAllInvoices() {
     }
 
     window.filteredInvoicesData = window.allInvoicesData.filter(invoice => {
+        // ค้นหาเฉพาะ เลขห้อง, ชื่อ, วันที่ (ไม่รวมยอดเงิน)
         const searchMatch = !searchTerm ||
             (invoice.room && String(invoice.room).toLowerCase().includes(searchTerm)) ||
             (invoice.name && String(invoice.name).toLowerCase().includes(searchTerm)) ||
