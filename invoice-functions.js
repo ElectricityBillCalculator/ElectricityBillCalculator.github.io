@@ -6,11 +6,27 @@ async function generateInvoiceHTML(billData) {
         throw new Error('ไม่พบข้อมูลบิล');
     }
 
+    // --- ดึง addon จาก rooms database ถ้า billData.addons ไม่มีหรือว่าง ---
+    let mergedAddons = Array.isArray(billData.addons) ? [...billData.addons] : [];
+    if ((!mergedAddons || mergedAddons.length === 0) && billData.room && typeof db !== 'undefined') {
+        try {
+            const roomAddonsSnap = await db.ref(`rooms/${billData.room}/addons`).once('value');
+            const roomAddons = roomAddonsSnap.val();
+            if (Array.isArray(roomAddons)) {
+                mergedAddons = [...roomAddons];
+            } else if (roomAddons && typeof roomAddons === 'object') {
+                mergedAddons = Object.values(roomAddons);
+            }
+        } catch (e) {
+            // ignore error, fallback to empty
+        }
+    }
+
     // Calculate totals
     const electricityCost = billData.total || 0;
     const waterCost = billData.waterTotal || 0;
     const rentCost = billData.rent || 0;
-    const addonTotal = billData.addons?.reduce((sum, addon) => sum + (parseFloat(addon.price) || 0), 0) || 0;
+    const addonTotal = mergedAddons.reduce((sum, addon) => sum + (parseFloat(addon.price) || 0), 0);
     const grandTotal = electricityCost + waterCost + rentCost + addonTotal;
 
     // Format date
@@ -33,84 +49,42 @@ async function generateInvoiceHTML(billData) {
         roomName = `ห้อง ${billData.room}`;
     }
 
-    // --- สร้าง HTML สำหรับ Addon ---
+    // --- สร้าง HTML แสดงรายละเอียดแต่ละยอด ---
     let addonRows = '';
-    if (billData.addons && billData.addons.length > 0) {
-        addonRows = billData.addons.map(addon => `
-            <tr>
-                <td class="px-4 py-3 text-sm">${addon.name || 'อื่นๆ'}</td>
-                <td class="px-4 py-3 text-sm text-right">${(parseFloat(addon.price) || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-            </tr>
-        `).join('');
+    if (addonTotal > 0 && mergedAddons.length > 0) {
+        mergedAddons.forEach(addon => {
+            addonRows += `<tr><td class='px-4 py-3 text-sm'>${addon.name || 'บริการเสริม'}</td><td class='px-4 py-3 text-sm text-right'>${(parseFloat(addon.price) || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td></tr>`;
+        });
     }
 
     return `
-        <div class="invoice-container bg-white text-black p-8 max-w-2xl mx-auto" id="invoice-content">
-            <!-- Header -->
-            <div class="text-center mb-8 border-b-2 border-gray-300 pb-4">
-                <h1 class="text-3xl font-bold text-gray-800 mb-2">ใบแจ้งค่าใช้จ่าย</h1>
-                <p class="text-gray-600">หอพัก</p>
-                <p class="text-sm text-gray-500 mt-2">วันที่ออกใบแจ้ง: ${currentDate}</p>
-            </div>
-
-            <!-- Customer Info -->
-            <div class="grid grid-cols-2 gap-8 mb-8">
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-3">ข้อมูลผู้เช่า</h3>
-                    <div class="space-y-2 text-sm">
-                        <div><strong>เลขห้อง:</strong> ${billData.room}</div>
-                        <div><strong>ชื่อ:</strong> ${billData.name || 'ไม่ระบุ'}</div>
-                        <div><strong>ชื่อห้อง:</strong> ${roomName}</div>
-                    </div>
+        <div class="max-w-lg mx-auto p-6 bg-white rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold text-green-600 mb-2 flex items-center"><i class="fas fa-file-invoice-dollar mr-2"></i>ใบแจ้งค่าใช้จ่าย</h2>
+            <div class="mb-4 text-sm text-gray-600">วันที่ออกใบแจ้งหนี้: ${currentDate}</div>
+            <div class="mb-6">
+                <div class="flex justify-between text-base font-semibold mb-1">
+                    <span>ห้อง: <span class="font-bold">${roomName}</span></span>
+                    <span>รอบบิล: <span class="font-bold">${billData.date || '-'}</span></span>
                 </div>
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-3">ข้อมูลการชำระ</h3>
-                    <div class="space-y-2 text-sm">
-                        <div><strong>เดือน:</strong> ${billData.date || 'ไม่ระบุ'}</div>
-                        <div><strong>วันครบกำหนด:</strong> ${billData.dueDate || 'ไม่ระบุ'}</div>
-                        <div><strong>สถานะ:</strong> 
-                            <span class="${billData.paymentConfirmed ? 'text-green-600' : 'text-red-600'} font-semibold">
-                                ${billData.paymentConfirmed ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}
-                            </span>
-                        </div>
-                    </div>
+                <div class="flex justify-between text-base mb-1">
+                    <span>ชื่อผู้เช่า:</span>
+                    <span>${billData.name || '-'}</span>
+                </div>
+                <div class="flex justify-between text-base mb-1">
+                    <span>วันครบกำหนด:</span>
+                    <span>${billData.dueDate || '-'}</span>
                 </div>
             </div>
 
-            <!-- Usage Details -->
-            <div class="mb-8">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">รายละเอียดการใช้</h3>
-                
-                <!-- Electricity -->
-                ${billData.currentReading && billData.previousReading ? `
-                <div class="bg-gray-50 p-4 rounded-lg mb-4">
-                    <h4 class="font-semibold text-gray-800 mb-3">ค่าไฟฟ้า</h4>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div><strong>มิเตอร์ปัจจุบัน:</strong> ${billData.currentReading} หน่วย</div>
-                        <div><strong>มิเตอร์ก่อนหน้า:</strong> ${billData.previousReading} หน่วย</div>
-                        <div><strong>จำนวนที่ใช้:</strong> ${billData.currentReading - billData.previousReading} หน่วย</div>
-                        <div><strong>อัตราค่าไฟ:</strong> ${billData.rate || 0} บาท/หน่วย</div>
-                    </div>
-                </div>
-                ` : ''}
-
-                <!-- Water -->
-                ${billData.waterCurrentReading && billData.waterPreviousReading ? `
-                <div class="bg-gray-50 p-4 rounded-lg mb-4">
-                    <h4 class="font-semibold text-gray-800 mb-3">ค่าน้ำ</h4>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div><strong>มิเตอร์ปัจจุบัน:</strong> ${billData.waterCurrentReading} หน่วย</div>
-                        <div><strong>มิเตอร์ก่อนหน้า:</strong> ${billData.waterPreviousReading} หน่วย</div>
-                        <div><strong>จำนวนที่ใช้:</strong> ${billData.waterCurrentReading - billData.waterPreviousReading} หน่วย</div>
-                        <div><strong>อัตราค่าน้ำ:</strong> ${billData.waterRate || 0} บาท/หน่วย</div>
-                    </div>
-                </div>
-                ` : ''}
+            <!-- ยอดรวมใหญ่ -->
+            <div class="mb-8 text-center">
+                <div class="text-lg text-gray-700">ยอดรวมทั้งสิ้น</div>
+                <div class="text-4xl font-bold text-green-600 my-2">฿${grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
             </div>
 
             <!-- Cost Breakdown -->
             <div class="mb-8">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">รายการค่าใช้จ่าย</h3>
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">รายละเอียดค่าใช้จ่าย</h3>
                 <div class="border border-gray-300 rounded-lg overflow-hidden">
                     <table class="w-full">
                         <thead class="bg-gray-100">

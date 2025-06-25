@@ -268,13 +268,37 @@ function buildCardContainer(cardsContainer, sortedRooms) {
         return;
     }
 
-    sortedRooms.forEach(room => {
+    sortedRooms.forEach(async room => {
         try {
             const { id, bill, status, tenantName, roomSize } = room;
             const billExists = bill && bill.id;
             const currentTenantName = tenantName || (billExists ? bill.name : 'ไม่มีผู้เช่า');
             const roomStatus = status || (billExists ? 'occupied' : 'vacant');
-            const totalAmount = billExists ? (bill.totalAll !== undefined ? bill.totalAll : (bill.total !== undefined ? bill.total : 0) ) : 0;
+
+            // --- ดึง addon จาก rooms database เสมอ ---
+            let mergedAddons = Array.isArray(bill?.addons) ? [...bill.addons] : [];
+            try {
+                const roomAddonsSnap = await db.ref(`rooms/${id}/addons`).once('value');
+                const roomAddons = roomAddonsSnap.val();
+                if (Array.isArray(roomAddons)) {
+                    mergedAddons = [...mergedAddons, ...roomAddons];
+                } else if (roomAddons && typeof roomAddons === 'object') {
+                    mergedAddons = [...mergedAddons, ...Object.values(roomAddons)];
+                }
+            } catch (e) { /* ignore */ }
+            const electricity = billExists ? (bill.total !== undefined ? bill.total : 0) : 0;
+            const water = billExists ? (bill.waterTotal !== undefined ? bill.waterTotal : 0) : 0;
+            const rent = billExists ? (bill.rent !== undefined ? bill.rent : 0) : 0;
+            const addonTotal = mergedAddons.reduce((sum, addon) => sum + (parseFloat(addon.price) || 0), 0);
+            const totalAmount = electricity + water + rent + addonTotal;
+
+            // --- สร้าง HTML แสดงรายละเอียดแต่ละยอด ---
+            let detailRows = '';
+            if (electricity > 0) detailRows += `<div class='flex justify-between text-xs'><span>ค่าไฟ</span><span>฿${electricity.toLocaleString('en-US', {minimumFractionDigits:2})}</span></div>`;
+            if (water > 0) detailRows += `<div class='flex justify-between text-xs'><span>ค่าน้ำ</span><span>฿${water.toLocaleString('en-US', {minimumFractionDigits:2})}</span></div>`;
+            if (rent > 0) detailRows += `<div class='flex justify-between text-xs'><span>ค่าเช่า</span><span>฿${rent.toLocaleString('en-US', {minimumFractionDigits:2})}</span></div>`;
+            if (addonTotal > 0) detailRows += `<div class='flex justify-between text-xs'><span>บริการเสริม</span><span>฿${addonTotal.toLocaleString('en-US', {minimumFractionDigits:2})}</span></div>`;
+
             const dueDateInfo = billExists ? getDueDateInfo(bill.dueDate) : { text: 'ไม่มีข้อมูล', color: 'text-slate-500' };
             const lastBillDate = billExists ? (bill.date || 'ไม่มีข้อมูล') : 'ไม่มีข้อมูล';
 
@@ -351,6 +375,7 @@ function buildCardContainer(cardsContainer, sortedRooms) {
                         <p class=\"text-3xl font-light ${totalAmountColor} tracking-tight\">
                            ฿${Number(totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
+                        <div class='mt-2 space-y-1'>${detailRows}</div>
                     </div>
                     <div class=\"mt-3 space-y-1\">
                         <div class=\"flex justify-between text-xs text-slate-400\">
@@ -367,7 +392,7 @@ function buildCardContainer(cardsContainer, sortedRooms) {
                         <i class=\"fas fa-file-invoice-dollar\"></i>
                     </button>
                     <button onclick=\"openAssessmentModal('${id}')\" title=\"ใบประเมินอุปกรณ์\" class=\"card-icon-button\">
-                        <i class=\"fas fa-clipboard-check\"></i>
+                        <i class="fas fa-clipboard-check"></i>
                     </button>
                     <button onclick=\"openRoomSettingsModal('${id}')\" title=\"ตั้งค่าห้อง\" class=\"card-icon-button\">
                         <i class=\"fas fa-cog\"></i>
