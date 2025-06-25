@@ -203,6 +203,23 @@
         <p class="text-slate-400 mt-2">ภาพรวมห้องพักและบิลทั้งหมดของคุณ</p>
     </header>
 
+    <div id="admin-tools-container" class="mt-4 p-2 bg-slate-700/80 rounded-lg border border-slate-600 flex flex-col gap-1 w-full max-w-3xl mx-auto shadow">
+        <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-semibold text-yellow-300 flex items-center gap-2">
+                <i class="fas fa-tools text-yellow-300"></i> เครื่องมือผู้ดูแลระบบ
+            </span>
+            <span class="text-slate-400 text-xs">(แสดงเฉพาะ Admin)</span>
+        </div>
+        <div id="admin-tools" class="flex flex-row gap-2 flex-wrap items-center">
+            <button id="btn-view-all-invoices" class="btn btn-success text-sm px-4 py-2 rounded font-bold shadow">
+                <i class="fas fa-file-invoice-dollar"></i> ดูใบแจ้งหนี้ทั้งหมด
+            </button>
+            <button id="btn-admin-panel" class="btn btn-primary text-sm px-4 py-2 rounded font-bold shadow">
+                <i class="fas fa-cog"></i> แผงควบคุม
+            </button>
+        </div>
+    </div>
+
     <!-- Navigation Tabs for Level 1 Owner -->
     <div id="level1-owner-tabs-container" class="container mx-auto px-4 mb-6 hidden">
         <div class="border-b border-slate-700">
@@ -637,6 +654,86 @@
         </div>
     </div>
 
+    <!-- All Invoices Modal -->
+    <div id="all-invoices-modal" class="modal-backdrop z-[58]">
+        <div class="modal-content max-w-6xl">
+            <div class="modal-header">
+                <h2 class="modal-title text-green-400"><i class="fas fa-file-invoice-dollar mr-3"></i>ใบแจ้งหนี้ทั้งหมด</h2>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="download-selected-invoices-btn" class="btn btn-secondary" disabled>
+                        <i class="fas fa-download"></i> ดาวน์โหลดที่เลือก
+                    </button>
+                    <button type="button" id="download-filtered-invoices-btn" class="btn btn-primary" disabled title="กรุณาเลือกห้องก่อน">
+                        <i class="fas fa-file-archive"></i> ดาวน์โหลดของห้องนี้
+                    </button>
+                    <button type="button" id="close-all-invoices-modal-btn" class="modal-close-btn">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- Search and Filter Section -->
+                <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center">
+                    <div class="relative flex-grow w-full sm:w-auto">
+                        <input type="text" id="search-invoices" placeholder="ค้นหาใบแจ้งหนี้ (ห้อง, ชื่อ, วันที่)..."
+                               class="pl-10 pr-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-green-500 focus:border-transparent w-full">
+                        <i class="fas fa-search absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                    </div>
+                    <select id="filter-invoice-room" class="px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-green-500 w-full sm:w-auto">
+                        <option value="">ทุกห้อง</option>
+                    </select>
+                    <select id="filter-invoice-date" class="px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-green-500 w-full sm:w-auto">
+                        <option value="">ทุกเดือน</option>
+                    </select>
+                </div>
+
+                <!-- Invoices Table -->
+                <div class="bg-slate-800 rounded-xl shadow-xl overflow-hidden border border-slate-700">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left min-w-[800px]">
+                            <thead class="border-b border-slate-700 bg-slate-700/50">
+                                <tr>
+                                    <th class="py-3 px-2 text-center w-12">
+                                        <input type="checkbox" id="select-all-invoices-checkbox" class="form-checkbox bg-slate-900 border-slate-600 text-green-500 focus:ring-green-500">
+                                    </th>
+                                    <th class="py-3 px-4 text-slate-300 font-semibold text-sm">ห้อง</th>
+                                    <th class="py-3 px-4 text-slate-300 font-semibold text-sm">ชื่อผู้เช่า</th>
+                                    <th class="py-3 px-4 text-slate-300 font-semibold text-sm">วันที่</th>
+                                    <th class="py-3 px-4 text-slate-300 font-semibold text-sm">ค่าไฟ</th>
+                                    <th class="py-3 px-4 text-slate-300 font-semibold text-sm">ค่าน้ำ</th>
+                                    <th class="py-3 px-4 text-slate-300 font-semibold text-sm">ค่าเช่า</th>
+                                    <th class="py-3 px-4 text-slate-300 font-semibold text-sm">รวม</th>
+                                    <th class="py-3 px-4 text-slate-300 font-semibold text-sm text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="all-invoices-table-body" class="divide-y divide-slate-700">
+                                <tr>
+                                    <td colspan="8" class="text-center py-10 text-slate-400">
+                                        <i class="fas fa-spinner fa-spin text-2xl mb-3"></i><br>
+                                        กำลังโหลดข้อมูลใบแจ้งหนี้...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div id="invoices-pagination" class="mt-6 flex justify-between items-center">
+                    <div class="text-slate-400 text-sm">
+                        แสดง <span id="invoices-start">0</span> - <span id="invoices-end">0</span> จาก <span id="invoices-total">0</span> รายการ
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="invoices-prev-page" class="btn btn-secondary px-3 py-1 text-sm" disabled>
+                            <i class="fas fa-chevron-left"></i> ก่อนหน้า
+                        </button>
+                        <button id="invoices-next-page" class="btn btn-secondary px-3 py-1 text-sm" disabled>
+                            ถัดไป <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -673,16 +770,5 @@
     <script src="invoice-functions.js"></script>
     <script src="script.js"></script>
     <script src="tenantManagement.js"></script>
-    <style>
-    /* Zebra striping for table rows */
-    #all-invoices-table-body tr:nth-child(even) { background-color: #23293a; }
-    #all-invoices-table-body tr:nth-child(odd) { background-color: #1e2330; }
-    #all-invoices-table-body td, #all-invoices-table-body th { vertical-align: middle; }
-    #all-invoices-table-body td { padding-top: 0.75rem; padding-bottom: 0.75rem; }
-    @media (max-width: 900px) {
-      .modal-content.max-w-6xl { max-width: 99vw; }
-      #all-invoices-table-body td, #all-invoices-table-body th { font-size: 13px; padding: 0.5rem 0.3rem; }
-    }
-    </style>
 </body>
 </html> 
