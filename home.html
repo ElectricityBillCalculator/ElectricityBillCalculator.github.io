@@ -201,11 +201,6 @@
     <header class="pt-10 pb-4 text-center" data-animation>
         <h1 class="text-4xl font-extrabold text-white tracking-wide">หน้าหลัก</h1>
         <p class="text-slate-400 mt-2">ภาพรวมห้องพักและบิลทั้งหมดของคุณ</p>
-        <div class="mt-6 flex justify-center">
-            <button id="btn-show-all-invoices-table" class="btn btn-success text-lg px-6 py-3 rounded font-bold shadow flex items-center gap-2">
-                <i class="fas fa-table"></i> ดูตารางใบแจ้งหนี้ทั้งหมด
-            </button>
-        </div>
     </header>
 
     <!-- Navigation Tabs for Level 1 Owner -->
@@ -638,41 +633,6 @@
                 <button type="button" id="process-csv-upload" class="btn btn-success" disabled>
                     <i class="fas fa-upload"></i>อัพโหลดข้อมูล
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: All Invoices Table -->
-    <div id="all-invoices-table-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-5xl mx-auto shadow-lg flex flex-col max-h-[90vh]">
-            <div class="p-4 flex justify-between items-center border-b border-slate-700 flex-shrink-0">
-                <h2 class="text-xl font-bold text-green-400 flex items-center gap-2"><i class="fas fa-table"></i> ตารางใบแจ้งหนี้ทั้งหมด</h2>
-                <button class="text-2xl text-slate-400 hover:text-white transition-colors" id="close-all-invoices-table-modal">&times;</button>
-            </div>
-            <div class="p-6 overflow-y-auto flex flex-col gap-4">
-                <div class="flex flex-col sm:flex-row gap-4 items-center mb-4">
-                    <input type="text" id="search-all-invoices" placeholder="ค้นหาเลขห้อง หรือชื่อผู้เช่า..." class="pl-10 pr-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-green-500 focus:border-transparent w-full max-w-xs">
-                    <i class="fas fa-search absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left min-w-[900px]">
-                        <thead class="border-b border-slate-700 bg-slate-700/50">
-                            <tr>
-                                <th class="py-3 px-4 text-slate-300 font-semibold text-sm">ห้อง</th>
-                                <th class="py-3 px-4 text-slate-300 font-semibold text-sm">ชื่อผู้เช่า</th>
-                                <th class="py-3 px-4 text-slate-300 font-semibold text-sm">วันที่</th>
-                                <th class="py-3 px-4 text-slate-300 font-semibold text-sm text-right">ค่าไฟ</th>
-                                <th class="py-3 px-4 text-slate-300 font-semibold text-sm text-right">ค่าน้ำ</th>
-                                <th class="py-3 px-4 text-slate-300 font-semibold text-sm text-right">ค่าเช่า</th>
-                                <th class="py-3 px-4 text-slate-300 font-semibold text-sm text-right">บริการเสริม</th>
-                                <th class="py-3 px-4 text-slate-300 font-semibold text-sm text-right">ยอดรวม</th>
-                            </tr>
-                        </thead>
-                        <tbody id="all-invoices-table-body-modal" class="divide-y divide-slate-700 text-sm">
-                            <tr><td colspan="8" class="text-center py-10 text-slate-400">กำลังโหลดข้อมูล...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
     </div>
